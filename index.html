@@ -1,0 +1,2293 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2850 km &amp; Orljava 89 km</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #111827;
+      --panel-2: #192336;
+      --border: #273549;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --gold: #facc15;
+      --sky: #38bdf8;
+      --ok: #22c55e;
+      --bad: #ef4444;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      transition: background-color 0.22s ease, border-color 0.22s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease, box-shadow 0.24s ease;
+    }
+    body {
+      margin: 0;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.13), transparent 42%),
+        radial-gradient(circle at 82% 16%, rgba(250, 204, 21, 0.1), transparent 40%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 18px;
+    }
+    .shell {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 9999;
+      display: none;
+    }
+
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes smoothFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes popCorrect {
+      0% { transform: scale(1); }
+      45% { transform: scale(1.03); }
+      100% { transform: scale(1); }
+    }
+    @keyframes shakeWrong {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+    @keyframes badgeReveal {
+      from { opacity: 0; transform: translateY(8px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .menu-box {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(160deg, rgba(20, 29, 46, 0.96), rgba(9, 14, 24, 0.98));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 26px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+      animation: fadeSlideIn 0.35s ease;
+    }
+    .menu-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .lang-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(9, 13, 22, 0.72);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      font-weight: 700;
+    }
+    .lang-select {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-weight: 700;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+    .top-action-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .info-pill-btn {
+      background: var(--panel-2);
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+      padding: 7px 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .info-pill-btn:hover { border-color: var(--sky); color: #ffffff; transform: translateY(-1px); }
+    .settings-pill-btn {
+      background: rgba(56, 189, 248, 0.14);
+      color: #7dd3fc;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      padding: 7px 13px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .settings-pill-btn:hover { transform: translateY(-1px); border-color: var(--gold); color: var(--gold); }
+
+    .menu-hero {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 22px;
+    }
+    .duck-showcase {
+      margin: 0 auto 10px;
+      width: 88px;
+      height: 88px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
+      border: 2.5px solid var(--sky);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: smoothFloat 3s ease-in-out infinite;
+    }
+    .menu-title {
+      margin: 4px 0 6px;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 0.8px;
+    }
+    .menu-lead {
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      max-width: 600px;
+    }
+
+    .mode-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 840px) {
+      .mode-cards { grid-template-columns: 1fr; }
+    }
+    .mode-card {
+      background: var(--panel);
+      border: 1.5px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .mode-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--gold);
+      box-shadow: 0 14px 26px rgba(0, 0, 0, 0.38);
+    }
+
+    .orljava-banner-card {
+      background: linear-gradient(135deg, rgba(17, 24, 39, 0.98), rgba(15, 34, 52, 0.96));
+      border: 1.5px solid rgba(56, 189, 248, 0.45);
+      border-radius: 18px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .orljava-banner-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--gold);
+    }
+
+    .card-badge {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: var(--sky);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .card-name {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin: 4px 0 5px;
+    }
+    .card-text {
+      font-size: 0.87rem;
+      color: var(--muted);
+      line-height: 1.45;
+      margin: 0;
+    }
+    .card-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--gold);
+      gap: 8px;
+    }
+
+    .qotd-standalone-card {
+      background: linear-gradient(145deg, rgba(16, 25, 42, 0.98), rgba(10, 17, 30, 0.99));
+      border: 1.5px solid rgba(56, 189, 248, 0.5);
+      border-radius: 20px;
+      padding: 20px 22px;
+      box-shadow: 0 14px 32px rgba(0, 0, 0, 0.36);
+    }
+    .qotd-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .qotd-tag {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--sky);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .qotd-pills-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .qotd-timer-pill {
+      background: rgba(250, 204, 21, 0.14);
+      border: 1px solid rgba(250, 204, 21, 0.45);
+      color: var(--gold);
+      padding: 4px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+    .qotd-next-pill {
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #7dd3fc;
+      padding: 4px 11px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+    .qotd-title {
+      margin: 0 0 14px;
+      font-size: 1.18rem;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .quiz-abcd-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 720px;
+    }
+    .abcd-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(96, 165, 250, 0.45);
+      background: linear-gradient(90deg, rgba(30, 58, 138, 0.68), rgba(29, 78, 216, 0.48));
+      color: #ffffff;
+      font-size: 0.96rem;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+    .abcd-btn-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .abcd-btn:hover:not(:disabled) {
+      transform: translateX(6px);
+      border-color: #93c5fd;
+      background: linear-gradient(90deg, rgba(37, 99, 235, 0.85), rgba(29, 78, 216, 0.68));
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.28);
+    }
+    .abcd-btn:disabled {
+      cursor: default;
+      opacity: 0.82;
+    }
+    .abcd-btn.correct-anim {
+      background: linear-gradient(90deg, #15803d, #22c55e) !important;
+      border-color: #86efac !important;
+      opacity: 1 !important;
+      box-shadow: 0 0 22px rgba(34, 197, 94, 0.48) !important;
+      animation: popCorrect 0.42s ease;
+    }
+    .abcd-btn.wrong-anim {
+      background: linear-gradient(90deg, #991b1b, #ef4444) !important;
+      border-color: #fca5a5 !important;
+      opacity: 1 !important;
+      animation: shakeWrong 0.36s ease;
+    }
+    .abcd-letter {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(15, 23, 42, 0.45);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+    .qotd-locked-box {
+      margin-top: 14px;
+      padding: 13px 16px;
+      border-radius: 14px;
+      background: rgba(9, 13, 22, 0.88);
+      border: 1px solid var(--border);
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .qotd-locked-box.show {
+      display: flex;
+      animation: badgeReveal 0.35s ease;
+    }
+    .result-badge {
+      padding: 6px 12px;
+      border-radius: 10px;
+      font-weight: 800;
+      font-size: 0.88rem;
+    }
+    .result-badge.ok {
+      background: rgba(34, 197, 94, 0.18);
+      border: 1px solid rgba(34, 197, 94, 0.55);
+      color: #86efac;
+    }
+    .result-badge.bad {
+      background: rgba(239, 68, 68, 0.18);
+      border: 1px solid rgba(239, 68, 68, 0.55);
+      color: #fca5a5;
+    }
+
+    .game-layout {
+      display: none;
+      grid-template-columns: 1fr 270px;
+      gap: 14px;
+      align-items: start;
+      animation: fadeSlideIn 0.3s ease;
+    }
+    .game-layout.active { display: grid; }
+    @media (max-width: 960px) {
+      .game-layout.active { grid-template-columns: 1fr; }
+    }
+
+    .main-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .top-strip {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 11px 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .strip-logo {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: var(--gold);
+    }
+    .strip-tabs {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .tab-pill {
+      padding: 7px 11px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: #e2e8f0;
+      font-weight: 700;
+      font-size: 0.79rem;
+      cursor: pointer;
+    }
+    .tab-pill.active {
+      background: var(--gold);
+      color: #0f172a;
+      border-color: var(--gold);
+    }
+    .home-pill {
+      padding: 7px 11px;
+      border-radius: 10px;
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      background: rgba(56, 189, 248, 0.14);
+      color: #7dd3fc;
+      font-weight: 800;
+      font-size: 0.79rem;
+      cursor: pointer;
+    }
+
+    .map-box {
+      position: relative;
+      height: 390px;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: #93c5fd;
+    }
+    #mapCanvas { width: 100%; height: 100%; z-index: 1; }
+    .leaflet-tile-pane { filter: saturate(1.15) contrast(1.03); }
+
+    .duck-map-wrap {
+      width: 46px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+    }
+    .duck-sprite.walk { animation: duckWalk 0.25s steps(2, end) infinite; }
+    @keyframes duckWalk {
+      0%   { transform: translateY(-3px) rotate(-5deg); }
+      50%  { transform: translateY(2px) rotate(5deg); }
+      100% { transform: translateY(-3px) rotate(-5deg); }
+    }
+
+    .hud-tl {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      z-index: 500;
+      background: rgba(255, 255, 255, 0.95);
+      color: #0f172a;
+      padding: 9px 13px;
+      border-radius: 12px;
+      min-width: 170px;
+    }
+    .hud-tl-city { font-weight: 800; font-size: 0.95rem; }
+    .hud-tl-km { font-size: 0.78rem; color: #475569; font-weight: 700; margin-top: 2px; }
+
+    .hud-tr {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      z-index: 500;
+      background: #15803d;
+      border: 2px solid #dcfce7;
+      color: #ffffff;
+      border-radius: 10px;
+      padding: 7px 11px;
+      min-width: 185px;
+      font-size: 0.82rem;
+    }
+    .sign-item {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      font-weight: 700;
+    }
+    .sign-item:last-child { border-bottom: none; }
+
+    .hud-br {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      z-index: 500;
+      display: flex;
+      gap: 6px;
+    }
+    .cam-chip {
+      background: rgba(255, 255, 255, 0.95);
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      padding: 6px 10px;
+      border-radius: 9px;
+      font-weight: 800;
+      font-size: 0.76rem;
+      cursor: pointer;
+    }
+    .cam-chip.active {
+      background: #0f172a;
+      color: var(--gold);
+      border-color: #0f172a;
+    }
+
+    .task-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 20px;
+    }
+    .task-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 0.83rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .streak-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      background: rgba(250, 204, 21, 0.12);
+      border: 1px solid rgba(250, 204, 21, 0.4);
+      color: var(--gold);
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.79rem;
+      font-weight: 800;
+    }
+    .best-pill {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #7dd3fc;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.79rem;
+      font-weight: 800;
+    }
+    .streak-pill.show-lives, .best-pill.show-lives { display: inline-flex; }
+
+    .task-q { margin: 0 0 6px; font-size: 1.18rem; color: #ffffff; }
+    .task-hint { margin: 0 0 14px; font-size: 0.87rem; color: #cbd5e1; }
+    .input-bar { display: flex; gap: 10px; flex-wrap: wrap; }
+    .ans-box {
+      flex: 1;
+      min-width: 210px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #090d16;
+      color: #ffffff;
+      font-size: 0.98rem;
+    }
+    .ans-box:focus { outline: none; border-color: var(--gold); }
+    .go-btn {
+      padding: 10px 17px;
+      border-radius: 10px;
+      border: none;
+      background: var(--gold);
+      color: #0f172a;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .skip-btn {
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: #cbd5e1;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .sec-btn {
+      padding: 10px 15px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: #f8fafc;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tiers-row {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 6px;
+    }
+    @media (max-width: 820px) { .tiers-row { grid-template-columns: repeat(2, 1fr); } }
+    .tier-card {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 7px 6px;
+      text-align: center;
+    }
+    .tier-card.active {
+      border-color: var(--gold);
+      background: rgba(250, 204, 21, 0.16);
+    }
+    .tier-lbl { font-size: 0.72rem; font-weight: 700; color: #e2e8f0; }
+    .tier-val { font-size: 0.8rem; font-weight: 800; color: var(--gold); margin-top: 2px; }
+
+    .opts-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 600px) { .opts-2col { grid-template-columns: 1fr; } }
+    .opt-choice {
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #090d16;
+      color: #f8fafc;
+      font-weight: 700;
+      text-align: left;
+      cursor: pointer;
+    }
+    .opt-choice.ok { background: #14532d; border-color: var(--ok); }
+    .opt-choice.bad { background: #7f1d1d; border-color: var(--bad); }
+
+    .feedback-strip {
+      margin-top: 12px;
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .feedback-strip.invalid {
+      border-color: rgba(239, 68, 68, 0.65);
+      background: rgba(127, 29, 29, 0.25);
+      color: #fecaca;
+    }
+    .next-manual-btn {
+      margin-top: 10px;
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--sky);
+      background: rgba(56, 189, 248, 0.14);
+      color: #7dd3fc;
+      font-weight: 800;
+      font-size: 0.82rem;
+      cursor: pointer;
+      display: none;
+    }
+
+    .finished-banner {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.16), rgba(56, 189, 248, 0.14));
+      border: 1.5px solid var(--gold);
+      border-radius: 16px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
+    }
+
+    .review-list { display: flex; flex-direction: column; gap: 9px; margin: 12px 0 16px; }
+    .review-card {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 11px 14px;
+    }
+    .review-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .review-cat { font-size: 0.72rem; font-weight: 800; color: var(--sky); text-transform: uppercase; }
+    .review-ans { font-size: 0.96rem; font-weight: 800; color: #ffffff; margin-top: 2px; }
+    .review-pts { font-size: 0.9rem; font-weight: 900; color: var(--gold); }
+
+    .side-settings {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .side-title { margin: 0; font-size: 1rem; font-weight: 800; color: #ffffff; }
+    .setting-item {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .setting-top { display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; font-weight: 700; }
+    .toggle-btn {
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #090d16;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 0.74rem;
+      cursor: pointer;
+    }
+    .toggle-btn.on { background: rgba(34, 197, 94, 0.18); color: #86efac; border-color: #22c55e; }
+    .speed-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .speed-btn {
+      padding: 6px 4px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #090d16;
+      color: #cbd5e1;
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .speed-btn.active { background: var(--sky); color: #0f172a; border-color: var(--sky); }
+    .vol-slider {
+      width: 100%;
+      accent-color: var(--gold);
+      cursor: pointer;
+    }
+    .danger-btn {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(239, 68, 68, 0.45);
+      background: rgba(239, 68, 68, 0.12);
+      color: #fca5a5;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 15, 0.76);
+      backdrop-filter: blur(5px);
+      z-index: 9000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card {
+      width: 100%;
+      max-width: 560px;
+      max-height: 85vh;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px;
+      animation: badgeReveal 0.25s ease;
+    }
+    .modal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .modal-title { margin: 0; font-size: 1.2rem; font-weight: 900; color: var(--gold); }
+    .modal-close {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .modal-body p, .modal-body li { color: #cbd5e1; font-size: 0.89rem; line-height: 1.5; }
+    .field-input, .field-textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #090d16;
+      color: #ffffff;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+    .field-textarea { min-height: 86px; resize: vertical; }
+    .status-note { margin-top: 8px; font-size: 0.83rem; color: #86efac; font-weight: 700; }
+  </style>
+</head>
+<body>
+<canvas id="confettiCanvas"></canvas>
+
+<div class="shell">
+  <!-- POČETNI ZASLON -->
+  <section class="menu-box" id="mainMenu">
+    <div class="menu-topbar">
+      <div class="lang-wrap">
+        <span id="lblLang">Jezik i pismo:</span>
+        <select class="lang-select" id="langSelect" onchange="changeLanguage(this.value)">
+          <option value="hr">Hrvatski</option>
+          <option value="sr-lat">Srpski (latinica)</option>
+          <option value="sr-cyr">Српски (ћирилица)</option>
+          <option value="bs">Bosanski</option>
+          <option value="en">English</option>
+          <option value="de">Deutsch</option>
+          <option value="it">Italiano</option>
+          <option value="fr">Français</option>
+        </select>
+      </div>
+
+      <div class="top-action-row">
+        <button class="info-pill-btn" onclick="openModal('rules')" id="btnRules">📜 Pravila</button>
+        <button class="info-pill-btn" onclick="openModal('faq')" id="btnFaq">❓ Česta pitanja</button>
+        <button class="info-pill-btn" onclick="openModal('contact')" id="btnContact">✉️ Pošalji upit</button>
+        <button class="settings-pill-btn" onclick="openModal('settings')" id="btnSettings">⚙️ Postavke</button>
+      </div>
+    </div>
+
+    <div class="menu-hero">
+      <div class="duck-showcase" id="menuDuck"></div>
+      <h1 class="menu-title">2850 km</h1>
+      <p class="menu-lead" id="menuLead">Odaberi način igre na Dunavu ili kreni u način <strong>Orljava (89 km)</strong>.</p>
+    </div>
+
+    <div class="mode-cards">
+      <div class="mode-card" onclick="playSound('click'); enterGame('rare')">
+        <div>
+          <div class="card-badge">Dunav • 2850 km</div>
+          <div class="card-name" id="nameRare">Što rjeđe</div>
+          <p class="card-text" id="descRare">Rjeđi točni odgovori donose više kilometara.</p>
+        </div>
+        <div class="card-foot">
+          <span id="mStatRare">0 / 2850 km</span>
+          <span id="playRare">Igraj →</span>
+        </div>
+      </div>
+
+      <div class="mode-card" onclick="playSound('click'); enterGame('common')">
+        <div>
+          <div class="card-badge">Dunav • 2850 km</div>
+          <div class="card-name" id="nameCommon">Što češće</div>
+          <p class="card-text" id="descCommon">Češći točni odgovori donose više kilometara.</p>
+        </div>
+        <div class="card-foot">
+          <span id="mStatCommon">0 / 2850 km</span>
+          <span id="playCommon">Igraj →</span>
+        </div>
+      </div>
+
+      <div class="mode-card" onclick="playSound('click'); enterGame('lives')">
+        <div>
+          <div class="card-badge">Dunav • 2850 km</div>
+          <div class="card-name" id="nameLives">Kviz (3 života)</div>
+          <p class="card-text" id="descLives">Odgovaraj na kviz pitanja uz 3 života.</p>
+        </div>
+        <div class="card-foot">
+          <span id="mStatLives">0 / 2850 km • 🏆 0 km • 🔥 0</span>
+          <span id="playLives">Igraj →</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="orljava-banner-card" onclick="playSound('click'); enterGame('orljava')">
+      <div>
+        <div class="card-badge" style="color:var(--gold);" id="badgeOrljava">Rijeka Orljava • 89 km</div>
+        <div class="card-name" style="margin-bottom:4px;" id="nameOrljava">Orljava (89 km)</div>
+        <p class="card-text" id="descOrljava">6 slavonskih i 4 opća pitanja po rundi.</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; font-weight:800; color:var(--gold); flex-wrap:wrap;">
+        <span id="mStatOrljava">0 / 89 km</span>
+        <span style="background:var(--gold); color:#0f172a; padding:8px 14px; border-radius:10px;" id="playOrljava">Igraj Orljavu →</span>
+      </div>
+    </div>
+
+    <!-- ZASEBNA KARTICA: PITANJE DANA -->
+    <div class="qotd-standalone-card" id="qotdStandalone">
+      <div class="qotd-head">
+        <span class="qotd-tag" id="qotdTag">📅 Pitanje dana • Težak kviz</span>
+        <div class="qotd-pills-right">
+          <span class="qotd-timer-pill" id="qotdTimer">⏱️ 0.0 s</span>
+          <span class="qotd-next-pill" id="qotdNextCountdown">⏳ Sljedeće za: --h --m --s</span>
+        </div>
+      </div>
+      <h2 class="qotd-title" id="qotdQuestionTitle">Učitavanje...</h2>
+      <div class="quiz-abcd-list" id="qotdAbcdOptions"></div>
+      <div class="qotd-locked-box" id="qotdLockedBox">
+        <div>
+          <div style="font-size:0.76rem; color:var(--muted); font-weight:700;" id="qotdPickedLabel">Zaključano:</div>
+          <div style="font-size:0.98rem; font-weight:800; color:#ffffff;" id="qotdPickedValue">-</div>
+        </div>
+        <span class="result-badge" id="qotdResultBadge">-</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- EKRAN IGRE -->
+  <section class="game-layout" id="gameLayout">
+    <div class="main-column">
+      <div class="top-strip">
+        <div class="strip-logo" id="stripLogo">2850 km</div>
+        <div class="strip-tabs">
+          <button class="tab-pill" id="tab-rare" onclick="playSound('click'); switchMode('rare')">1. Što rjeđe</button>
+          <button class="tab-pill" id="tab-common" onclick="playSound('click'); switchMode('common')">2. Što češće</button>
+          <button class="tab-pill" id="tab-lives" onclick="playSound('click'); switchMode('lives')">3. Kviz (3 života)</button>
+          <button class="tab-pill" id="tab-orljava" onclick="playSound('click'); switchMode('orljava')">4. Orljava (89 km)</button>
+          <button class="home-pill" onclick="playSound('click'); goToMenu()" id="btnHome">🏠 Početni zaslon</button>
+        </div>
+      </div>
+
+      <div class="map-box">
+        <div id="mapCanvas"></div>
+        <div class="hud-tl">
+          <div class="hud-tl-city" id="hudCity">Donaueschingen</div>
+          <div class="hud-tl-km" id="hudKm">0 km od 2850 km</div>
+        </div>
+        <div class="hud-tr" id="hudSign"></div>
+        <div class="hud-br">
+          <button class="cam-chip active" id="camFollow" onclick="playSound('click'); setCam('follow')">Kamera prati</button>
+          <button class="cam-chip" id="camFull" onclick="playSound('click'); setCam('full')">Cijela ruta</button>
+        </div>
+      </div>
+
+      <div class="task-box">
+        <div class="task-meta">
+          <span id="qProgress">Pitanje 1 / 10</span>
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span class="streak-pill" id="streakBadge">🔥 Niz točnih: 0</span>
+            <span class="best-pill" id="bestBadge">🏆 High score: 0 km</span>
+            <span id="modeRightMeta" style="color:var(--gold);"></span>
+          </div>
+        </div>
+
+        <div id="questionSlot"></div>
+
+        <div class="feedback-strip" id="feedbackBar">
+          <span id="feedbackMsg"></span>
+          <span id="feedbackKm" style="color:var(--gold); font-weight:900;"></span>
+        </div>
+
+        <button class="next-manual-btn" id="manualNextBtn" onclick="advanceQuestion()">Sljedeće pitanje →</button>
+      </div>
+    </div>
+
+    <aside class="side-settings">
+      <h2 class="side-title" id="sideTitle">⚙️ Postavke</h2>
+      <div class="setting-item">
+        <div class="setting-top">
+          <span id="lblSound">Zvuk</span>
+          <button class="toggle-btn on" id="toggleSoundBtn" onclick="toggleSetting('sound')">UKLJUČENO</button>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.76rem; color:var(--muted);">
+          <span>Glasnoća</span>
+          <span id="sideVolLabel">75%</span>
+        </div>
+        <input class="vol-slider" type="range" min="0" max="100" id="sideVolSlider" oninput="setVolume(this.value)" />
+      </div>
+      <div class="setting-item">
+        <div class="setting-top">
+          <span id="lblAuto">Automatski sljedeći</span>
+          <button class="toggle-btn on" id="toggleAutoBtn" onclick="toggleSetting('autoNext')">UKLJUČENO</button>
+        </div>
+      </div>
+      <div class="setting-item">
+        <div class="setting-top"><span id="lblSpeed">Brzina patke</span></div>
+        <div class="speed-group">
+          <button class="speed-btn" id="spd-slow" onclick="playSound('click'); setSpeed('slow')">Sporo</button>
+          <button class="speed-btn active" id="spd-normal" onclick="playSound('click'); setSpeed('normal')">Normalno</button>
+          <button class="speed-btn" id="spd-fast" onclick="playSound('click'); setSpeed('fast')">Brzo</button>
+        </div>
+      </div>
+      <button class="danger-btn" onclick="playSound('click'); resetCurrentMode()" id="btnResetMode">Resetiraj ovaj način</button>
+    </aside>
+  </section>
+</div>
+
+<!-- MODAL -->
+<div class="modal-backdrop" id="infoModal" onclick="if(event.target===this) closeModal()">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 class="modal-title" id="modalTitle">Naslov</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const ROUND_SIZE = 10;
+
+  const CYR_MAP = {
+    "lj": "љ", "nj": "њ", "dž": "џ",
+    "a": "а", "b": "б", "v": "в", "g": "г", "d": "д", "đ": "ђ", "e": "е",
+    "ž": "ж", "z": "з", "i": "и", "j": "ј", "k": "к", "l": "л", "m": "м",
+    "n": "н", "o": "о", "p": "п", "r": "р", "s": "с", "t": "т", "ć": "ћ",
+    "u": "у", "f": "ф", "h": "х", "c": "ц", "č": "ч", "š": "ш"
+  };
+
+  function toCyrillic(text) {
+    let out = "";
+    const lower = text.toLowerCase();
+    for (let i = 0; i < text.length; i++) {
+      const pair = lower.slice(i, i + 2);
+      if (CYR_MAP[pair]) {
+        const isCap = text[i] !== text[i].toLowerCase();
+        out += isCap ? CYR_MAP[pair].toUpperCase() : CYR_MAP[pair];
+        i++;
+        continue;
+      }
+      const ch = text[i];
+      const lch = ch.toLowerCase();
+      if (CYR_MAP[lch]) out += ch !== lch ? CYR_MAP[lch].toUpperCase() : CYR_MAP[lch];
+      else out += ch;
+    }
+    return out;
+  }
+
+  function trStr(str, langKey) {
+    return langKey === "sr-cyr" ? toCyrillic(str) : str;
+  }
+
+  function normText(str) {
+    return str.trim().toLowerCase()
+      .replace(/č|ć/g, "c").replace(/đ/g, "d").replace(/š/g, "s").replace(/ž/g, "z")
+      .replace(/[-_]+/g, " ").replace(/\s+/g, " ");
+  }
+
+  function levenshteinDist(a, b) {
+    const m = a.length, n = b.length;
+    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      }
+    }
+    return dp[m][n];
+  }
+
+  function formatDisplayWord(w) {
+    return w.split(" ").map(p => p ? p.charAt(0).toUpperCase() + p.slice(1) : "").join(" ");
+  }
+
+  function findClosestSuggestion(rawInput, candidateWords) {
+    const inp = normText(rawInput);
+    if (inp.length < 3 || !candidateWords || !candidateWords.length) return null;
+    let bestWord = null, bestScore = Infinity;
+    candidateWords.forEach(orig => {
+      const cand = normText(orig);
+      if (!cand) return;
+      const dist = levenshteinDist(inp, cand);
+      const maxAllowed = cand.length <= 5 ? 1 : cand.length <= 8 ? 2 : 3;
+      if (dist <= maxAllowed && dist < Math.max(inp.length, cand.length)) {
+        if (dist < bestScore) { bestScore = dist; bestWord = orig; }
+      }
+    });
+    return bestWord ? formatDisplayWord(bestWord) : null;
+  }
+
+  function buildPixelDuck(size = 42) {
+    const grid = [
+      "....OOOOOO......", "...OYYYYYYO.....", "...OYYYWWKKO....", "...OYYYWWWWPPPO.",
+      "...OYYYYYYPBBBO.", "....OOYYYYYOOOO.", "..OOOOYYYYYYO...", ".OYYYYDYYYYYYO..",
+      ".OYYYYDYYYYYYO..", ".OYYYYYYYYYYYYO.", ".OYYYYYYYYYYYYO.", "..OYYYYYYYYYYO..",
+      "...OOOOOOOOOO...", "....PPPO..PPPO..", "...PBBBO..PBBBO.", "...OOOOO..OOOOO."
+    ];
+    const colors = { "O": "#2b1d12", "Y": "#facc15", "D": "#eab308", "P": "#f97316", "B": "#c2410c", "W": "#ffffff", "K": "#0f172a" };
+    let shapes = "";
+    for (let y = 0; y < grid.length; y++) {
+      for (let x = 0; x < grid[y].length; x++) {
+        const c = grid[y][x];
+        if (c !== "." && colors[c]) shapes += `<rect x="${x}" y="${y}" width="1" height="1" fill="${colors[c]}" />`;
+      }
+    }
+    return `<svg width="${size}" height="${size}" viewBox="0 0 16 16" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${shapes}</svg>`;
+  }
+
+  document.getElementById("menuDuck").innerHTML = buildPixelDuck(64);
+
+  let audioCtx = null;
+  function getVolGain() {
+    if (!state || !state.settings || !state.settings.sound) return 0;
+    return Math.max(0, Math.min(1, (state.settings.volume ?? 75) / 100));
+  }
+
+  function playSound(type) {
+    const vol = getVolGain();
+    if (vol <= 0) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      if (type === "click") {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(520, now);
+        gain.gain.setValueAtTime(0.05 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+        osc.start(now); osc.stop(now + 0.05);
+      } else if (type === "good") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(660, now + 0.07);
+        gain.gain.setValueAtTime(0.09 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        osc.start(now); osc.stop(now + 0.17);
+      } else if (type === "city" || type === "streak10") {
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, now);
+        osc.frequency.setValueAtTime(880, now + 0.08);
+        gain.gain.setValueAtTime(0.11 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        osc.start(now); osc.stop(now + 0.26);
+      } else if (type === "bad") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(210, now);
+        osc.frequency.linearRampToValueAtTime(125, now + 0.18);
+        gain.gain.setValueAtTime(0.1 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now); osc.stop(now + 0.21);
+      } else if (type === "finish") {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(783.99, now + 0.12);
+        osc.frequency.setValueAtTime(1046.5, now + 0.24);
+        gain.gain.setValueAtTime(0.12 * vol, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.start(now); osc.stop(now + 0.46);
+      }
+    } catch (_) {}
+  }
+
+  let confettiRaf = null;
+  function launchConfetti() {
+    const canvas = document.getElementById("confettiCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = "block";
+    const palette = ["#facc15", "#38bdf8", "#22c55e", "#ec4899", "#f97316"];
+    const pieces = Array.from({ length: 120 }, () => ({
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * canvas.height * 0.4,
+      w: 7 + Math.random() * 7,
+      h: 5 + Math.random() * 5,
+      vy: 2.4 + Math.random() * 3.8,
+      vx: -1.6 + Math.random() * 3.2,
+      rot: Math.random() * Math.PI * 2,
+      vRot: -0.1 + Math.random() * 0.2,
+      color: palette[Math.floor(Math.random() * palette.length)]
+    }));
+    cancelAnimationFrame(confettiRaf);
+    const start = performance.now();
+    function step(now) {
+      const el = now - start;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      pieces.forEach(p => {
+        p.x += p.vx; p.y += p.vy; p.rot += p.vRot;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.color; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        ctx.restore();
+      });
+      if (el < 3600) confettiRaf = requestAnimationFrame(step);
+      else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = "none"; }
+    }
+    confettiRaf = requestAnimationFrame(step);
+  }
+
+  const HARD_DAILY_QUESTIONS = [
+    { q: "Tko je napisao roman 'Povratak Filipa Latinovicza'?", options: ["Ivana Brlić-Mažuranić", "Miroslav Krleža", "August Šenoa", "Marija Jurić Zagorka"], correctIndex: 1 },
+    { q: "Koji je najduži pritok Dunava?", options: ["Drava", "Tisa", "Sava", "Morava"], correctIndex: 1 },
+    { q: "Tko je bio prvi predsjednik Republike Hrvatske?", options: ["Stjepan Mesić", "Franjo Tuđman", "Ivo Josipović", "Zoran Milanović"], correctIndex: 1 },
+    { q: "Koji je najveći planet u Sunčevom sustavu?", options: ["Saturn", "Uran", "Jupiter", "Neptun"], correctIndex: 2 },
+    { q: "Tko je napisao 'Priče iz davnine'?", options: ["Tin Ujević", "Ivana Brlić-Mažuranić", "Vladimir Nazor", "Dobriša Cesarić"], correctIndex: 1 },
+    { q: "Koji kemijski element ima simbol 'Au'?", options: ["Srebro", "Zlato", "Argon", "Aluminij"], correctIndex: 1 },
+    { q: "Koji europski glavni grad leži na ušću Vltave u Labu — zapravo Vltava se ulijeva u Labu u Mělníku, a na kojoj rijeci leži Prag?", options: ["Dunavu", "Vltavi", "Rajni", "Savi"], correctIndex: 1 }
+  ];
+
+  function getTodayKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function getTodayHardQuiz() {
+    const d = new Date();
+    const dayNum = Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
+    return HARD_DAILY_QUESTIONS[Math.abs(dayNum) % HARD_DAILY_QUESTIONS.length];
+  }
+
+  function updateNextDailyCountdown() {
+    const now = new Date();
+    const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+    const diffSec = Math.max(0, Math.floor((nextMidnight - now) / 1000));
+    const h = String(Math.floor(diffSec / 3600)).padStart(2, "0");
+    const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, "0");
+    const s = String(diffSec % 60).padStart(2, "0");
+    const el = document.getElementById("qotdNextCountdown");
+    if (el) el.textContent = trStr(`⏳ Sljedeće za: ${h}h ${m}m ${s}s`, state.lang || "hr");
+  }
+
+  const DANUBE_CITIES = [
+    { km: 0, lat: 47.952, lng: 8.504, name: "Donaueschingen" },
+    { km: 250, lat: 48.366, lng: 10.898, name: "Augsburg" },
+    { km: 400, lat: 48.566, lng: 13.431, name: "Passau" },
+    { km: 560, lat: 48.306, lng: 14.286, name: "Linz" },
+    { km: 750, lat: 48.208, lng: 16.373, name: "Beč" },
+    { km: 820, lat: 48.148, lng: 17.107, name: "Bratislava" },
+    { km: 1100, lat: 47.497, lng: 19.040, name: "Budimpešta" },
+    { km: 1520, lat: 45.343, lng: 19.002, name: "Vukovar" },
+    { km: 1555, lat: 45.222, lng: 19.373, name: "Ilok" },
+    { km: 1680, lat: 44.786, lng: 20.448, name: "Beograd" },
+    { km: 1920, lat: 44.671, lng: 22.527, name: "Đerdap" },
+    { km: 2850, lat: 45.166, lng: 29.650, name: "Crno more" }
+  ];
+
+  const ORLJAVA_CITIES = [
+    { km: 0, lat: 45.442, lng: 17.468, name: "Psunj (Bjelajci / Bučje)" },
+    { km: 18, lat: 45.352, lng: 17.596, name: "Brestovac" },
+    { km: 32, lat: 45.340, lng: 17.676, name: "Požega" },
+    { km: 48, lat: 45.288, lng: 17.804, name: "Pleternica" },
+    { km: 64, lat: 45.236, lng: 17.892, name: "Ciglenik" },
+    { km: 76, lat: 45.182, lng: 17.942, name: "Lužani" },
+    { km: 89, lat: 45.102, lng: 17.956, name: "Slavonski Kobaš" }
+  ];
+
+  function getTotalKmForMode(modeKey = state.mode) { return modeKey === "orljava" ? 89 : 2850; }
+  function getRouteForMode(modeKey = state.mode) { return modeKey === "orljava" ? ORLJAVA_CITIES : DANUBE_CITIES; }
+  function isRouteCompleted(modeKey = state.mode) { return state.modes[modeKey].km >= getTotalKmForMode(modeKey); }
+
+  /* ŠIROK BAZEN PITANJA O SVEMU (PISCI, PREDSJEDNICI, SVEMIR, ZNANOST, GEOGRAFIJA, KULTURA) */
+  const RARE_QUESTIONS = [
+    {
+      id: "r_writers", cat: "HRVATSKI I SVJETSKI PISCI", q: "Upiši poznatog pisca ili književnika.",
+      hint: "Primjeri: Krleža, Šenoa, Ujević, Nazor, Cesarić, Andrić, Shakespeare, Orwell.",
+      ranks: [
+        { ans: "miroslav krleža", alt: ["krleza"], rank: "Vrlo često", km: 6, tier: 0, info: "Miroslav Krleža (jedan od najvažnijih hrvatskih pisaca 20. stoljeća)" },
+        { ans: "august šenoa", alt: ["senoa"], rank: "Često", km: 12, tier: 1, info: "August Šenoa (autor Zlatarovog zlata i Seljačke bune)" },
+        { ans: "ivana brlić mažuranić", alt: ["ivana brlic mazuranic", "brlic mazuranic", "brlić-mažuranić"], rank: "Poznato", km: 20, tier: 2, info: "Ivana Brlić-Mažuranić (autorica Priča iz davnine i Čudnovatih zgoda šegrta Hlapića)" },
+        { ans: "tin ujević", alt: ["tin ujevic", "ujevic"], rank: "Srednje", km: 32, tier: 3, info: "Tin Ujević (istaknuti hrvatski pjesnik)" },
+        { ans: "vladimir nazor", alt: ["nazor"], rank: "Srednje", km: 32, tier: 3, info: "Vladimir Nazor (književnik i pjesnik)" },
+        { ans: "dobriša cesarić", alt: ["dobrisa cesaric", "cesaric"], rank: "Rjeđe", km: 45, tier: 4, info: "Dobriša Cesarić (poznat po pjesmi Voćka poslije kiše i Slap)" },
+        { ans: "ivo andrić", alt: ["ivo andric", "andric"], rank: "Rjeđe", km: 45, tier: 4, info: "Ivo Andrić (dobitnik Nobelove nagrade za književnost)" },
+        { ans: "william shakespeare", alt: ["shakespeare", "sekspir"], rank: "Vrlo rijetko", km: 60, tier: 5, info: "William Shakespeare (engleski dramatičar i pjesnik)" },
+        { ans: "george orwell", alt: ["orwell"], rank: "Najrjeđe", km: 75, tier: 6, info: "George Orwell (autor romana 1984 i Životinjska farma)" }
+      ]
+    },
+    {
+      id: "r_presidents", cat: "PREDSJEDNICI I DRŽAVNICI", q: "Upiši predsjednika države (hrvatskog ili svjetskog).",
+      hint: "Primjeri: Franjo Tuđman, Stjepan Mesić, Ivo Josipović, Kolinda Grabar-Kitarović, Zoran Milanović, Abraham Lincoln, Nelson Mandela.",
+      ranks: [
+        { ans: "franjo tuđman", alt: ["franjo tudjman", "tudjman", "tuđman"], rank: "Vrlo često", km: 6, tier: 0, info: "Franjo Tuđman (prvi predsjednik Republike Hrvatske)" },
+        { ans: "zoran milanović", alt: ["zoran milanovic", "milanovic"], rank: "Često", km: 12, tier: 1, info: "Zoran Milanović (predsjednik Republike Hrvatske)" },
+        { ans: "stjepan mesić", alt: ["stjepan mesic", "mesic", "stipe mesic"], rank: "Poznato", km: 20, tier: 2, info: "Stjepan Mesić (predsjednik Republike Hrvatske u dva mandata)" },
+        { ans: "kolinda grabar kitarović", alt: ["kolinda grabar-kitarovic", "kolinda", "grabar kitarovic"], rank: "Srednje", km: 32, tier: 3, info: "Kolinda Grabar-Kitarović (predsjednica Republike Hrvatske)" },
+        { ans: "ivo josipović", alt: ["ivo josipovic", "josipovic"], rank: "Rjeđe", km: 45, tier: 4, info: "Ivo Josipović (predsjednik Republike Hrvatske)" },
+        { ans: "abraham lincoln", alt: ["lincoln"], rank: "Vrlo rijetko", km: 60, tier: 5, info: "Abraham Lincoln (16. predsjednik SAD-a)" },
+        { ans: "nelson mandela", alt: ["mandela"], rank: "Najrjeđe", km: 75, tier: 6, info: "Nelson Mandela (predsjednik Južnoafričke Republike i borac protiv apartheida)" }
+      ]
+    },
+    {
+      id: "r_space", cat: "SVEMIR I ASTRONOMIJA", q: "Upiši nebesko tijelo ili objekt u svemiru.",
+      hint: "Primjeri: Sunce, Mjesec, Mars, Jupiter, Saturn, komet, asteroid, galaksija.",
+      ranks: [
+        { ans: "sunce", rank: "Vrlo često", km: 6, tier: 0, info: "Sunce (središnja zvijezda našeg sustava)" },
+        { ans: "mjesec", alt: ["moon"], rank: "Često", km: 12, tier: 1, info: "Mjesec (jedini prirodni satelit Zemlje)" },
+        { ans: "mars", rank: "Poznato", km: 20, tier: 2, info: "Mars (četvrti planet od Sunca)" },
+        { ans: "jupiter", rank: "Poznato", km: 20, tier: 2, info: "Jupiter (najveći planet Sunčevog sustava)" },
+        { ans: "saturn", rank: "Srednje", km: 32, tier: 3, info: "Saturn (planet s prepoznatljivim prstenovima)" },
+        { ans: "komet", alt: ["kometa"], rank: "Rjeđe", km: 45, tier: 4, info: "Komet (ledeno nebesko tijelo s repom blizu Sunca)" },
+        { ans: "asteroid", rank: "Vrlo rijetko", km: 60, tier: 5, info: "Asteroid (stjenovito tijelo u svemiru)" },
+        { ans: "galaksija", alt: ["galaktika", "mlijecni put", "mliječni put"], rank: "Najrjeđe", km: 75, tier: 6, info: "Galaksija (sustav milijardi zvijezda, plina i prašine)" }
+      ]
+    },
+    {
+      id: "r_cities_hr", cat: "GRADOVI U HRVATSKOJ", q: "Upiši grad u Hrvatskoj.",
+      hint: "Primjeri: Zagreb, Split, Osijek, Rijeka, Zadar, Dubrovnik, Pula, Varaždin.",
+      ranks: [
+        { ans: "zagreb", rank: "Vrlo često", km: 6, tier: 0, info: "Zagreb (glavni grad Hrvatske)" },
+        { ans: "split", rank: "Često", km: 12, tier: 1, info: "Split (najveći grad na Jadranu)" },
+        { ans: "rijeka", rank: "Poznato", km: 20, tier: 2, info: "Rijeka (luka na Kvarneru)" },
+        { ans: "osijek", rank: "Poznato", km: 20, tier: 2, info: "Osijek (grad na Dravi u Slavoniji)" },
+        { ans: "zadar", rank: "Srednje", km: 32, tier: 3, info: "Zadar (grad u sjevernoj Dalmaciji)" },
+        { ans: "dubrovnik", rank: "Rjeđe", km: 45, tier: 4, info: "Dubrovnik (grad na jugu Dalmacije)" },
+        { ans: "pula", rank: "Rjeđe", km: 45, tier: 4, info: "Pula (grad u Istri)" },
+        { ans: "varaždín", alt: ["varazdin", "varaždin"], rank: "Vrlo rijetko", km: 60, tier: 5, info: "Varaždin (grad na sjeveru Hrvatske)" },
+        { ans: "šibenik", alt: ["sibenik"], rank: "Najrjeđe", km: 75, tier: 6, info: "Šibenik (grad u srednjoj Dalmaciji)" }
+      ]
+    },
+    {
+      id: "r_countries_danube", cat: "DRŽAVE UZ DUNAV", q: "Upiši državu kroz koju teče ili graniči Dunav.",
+      hint: "Primjeri: Hrvatska, Njemačka, Austrija, Mađarska, Srbija, Slovačka, Bugarska, Rumunjska, Ukrajina, Moldavija.",
+      ranks: [
+        { ans: "hrvatska", alt: ["croatia"], rank: "Vrlo često", km: 6, tier: 0, info: "Hrvatska (188 km dunavskog toka)" },
+        { ans: "njemačka", alt: ["njemacka", "germany"], rank: "Često", km: 12, tier: 1, info: "Njemačka (izvor Dunava)" },
+        { ans: "austrija", alt: ["austria"], rank: "Poznato", km: 20, tier: 2, info: "Austrija (Beč i dolina Wachau)" },
+        { ans: "mađarska", alt: ["madjarska", "hungary"], rank: "Poznato", km: 20, tier: 2, info: "Mađarska (Budimpešta)" },
+        { ans: "srbija", alt: ["serbia"], rank: "Srednje", km: 32, tier: 3, info: "Srbija (Beograd i Đerdap)" },
+        { ans: "slovačka", alt: ["slovacka", "slovakia"], rank: "Rjeđe", km: 45, tier: 4, info: "Slovačka (Bratislava)" },
+        { ans: "bugarska", alt: ["bulgaria"], rank: "Rjeđe", km: 45, tier: 4, info: "Bugarska (južna obala Dunava)" },
+        { ans: "rumunjska", alt: ["romania"], rank: "Vrlo rijetko", km: 60, tier: 5, info: "Rumunjska (najduži tok i delta)" },
+        { ans: "ukrajina", alt: ["ukraine"], rank: "Najrjeđe", km: 75, tier: 6, info: "Ukrajina (sjeverni dio delte)" },
+        { ans: "moldavija", alt: ["moldova"], rank: "Najrjeđe", km: 75, tier: 6, info: "Moldavija (izlaz na Dunav)" }
+      ]
+    },
+    {
+      id: "r_inventions", cat: "IZUMI I ZNANOST", q: "Upiši poznati izum ili znanstveno otkriće/pojam.",
+      hint: "Primjeri: Telefon, žarulja, radio, kompas, tiskarski stroj, internet, penicillin.",
+      ranks: [
+        { ans: "telefon", rank: "Vrlo često", km: 6, tier: 0, info: "Telefon (uređaj za prijenos glasa na daljinu)" },
+        { ans: "žarulja", alt: ["zarulja"], rank: "Često", km: 12, tier: 1, info: "Žarulja (električni izvor svjetlosti)" },
+        { ans: "radio", rank: "Poznato", km: 20, tier: 2, info: "Radio (bežični prijenos signala)" },
+        { ans: "kompas", rank: "Srednje", km: 32, tier: 3, info: "Kompas (sprava za orijentaciju pomoću magnetskog polja)" },
+        { ans: "tiskarski stroj", alt: ["tisak"], rank: "Rjeđe", km: 45, tier: 4, info: "Tiskarski stroj (Gutenbergov izum koji je promijenio širenje znanja)" },
+        { ans: "internet", rank: "Vrlo rijetko", km: 60, tier: 5, info: "Internet (globalna mreža povezanih računala)" },
+        { ans: "penicilin", rank: "Najrjeđe", km: 75, tier: 6, info: "Penicilin (prvi široko primijenjeni antibiotik)" }
+      ]
+    }
+  ];
+
+  const COMMON_QUESTIONS = [
+    {
+      id: "c_fruit", cat: "VOĆE", q: "Upiši neko voće — što češće voće, to više km!",
+      hint: "Primjeri: Jabuka, banana, naranča, kruška, jagoda, šljiva.",
+      scores: {
+        "jabuka": { km: 65, alt: ["apple"], info: "Jabuka (vrlo često voće)" },
+        "banana": { km: 58, alt: [], info: "Banana (vrlo često voće)" },
+        "naranča": { km: 52, alt: ["naranca"], info: "Naranča (često voće)" },
+        "kruška": { km: 46, alt: ["kruska"], info: "Kruška (često voće)" },
+        "jagoda": { km: 40, alt: [], info: "Jagoda (poznato voće)" },
+        "šljiva": { km: 35, alt: ["sljiva"], info: "Šljiva (poznato voće)" },
+        "trešnja": { km: 30, alt: ["tresnja"], info: "Trešnja (sezonsko voće)" },
+        "limun": { km: 26, alt: [], info: "Limun (citrusno voće)" },
+        "mango": { km: 12, alt: [], info: "Mango (tropsko voće)" },
+        "dud": { km: 7, alt: [], info: "Dud (rjeđe spominjano voće)" }
+      }
+    },
+    {
+      id: "c_colors", cat: "BOJE", q: "Upiši neku boju — najčešće boje nose najviše km!",
+      hint: "Primjeri: Crvena, plava, zelena, žuta, crna, bijela.",
+      scores: {
+        "crvena": { km: 65, alt: [], info: "Crvena (vrlo česta boja)" },
+        "plava": { km: 58, alt: [], info: "Plava (vrlo česta boja)" },
+        "zelena": { km: 52, alt: [], info: "Zelena (vrlo česta boja)" },
+        "žuta": { km: 46, alt: ["zuta"], info: "Žuta (česta boja)" },
+        "crna": { km: 42, alt: [], info: "Crna (česta boja)" },
+        "bijela": { km: 38, alt: [], info: "Bijela (česta boja)" },
+        "ljubičasta": { km: 28, alt: ["ljubicasta"], info: "Ljubičasta boja" },
+        "roza": { km: 26, alt: [], info: "Roza boja" },
+        "tirkizna": { km: 12, alt: [], info: "Tirkizna boja" },
+        "magenta": { km: 8, alt: [], info: "Magenta boja" }
+      }
+    },
+    {
+      id: "c_instruments", cat: "GLAZBENA GLAZBALA", q: "Upiši neko glazbalo — što češće glazbalo, to više km!",
+      hint: "Primjeri: Gitara, klavir, violina, bubnjevi, flauta, truba.",
+      scores: {
+        "gitara": { km: 65, alt: [], info: "Gitara (jedno od najčešćih glazbala)" },
+        "klavir": { km: 58, alt: [], info: "Klavir (klasično i moderno glazbalo)" },
+        "violina": { km: 50, alt: [], info: "Violina (gudačko glazbalo)" },
+        "bubnjevi": { km: 44, alt: ["bubanj"], info: "Bubnjevi (udaraljkaško glazbalo)" },
+        "flauta": { km: 34, alt: [], info: "Flauta (puhačko glazbalo)" },
+        "truba": { km: 30, alt: [], info: "Truba (limeno puhačko glazbalo)" },
+        "harfa": { km: 14, alt: [], info: "Harfa (trzalačko glazbalo)" },
+        "oboa": { km: 9, alt: [], info: "Oboa (drveno puhačko glazbalo)" }
+      }
+    },
+    {
+      id: "c_months", cat: "MJESECI U GODINI", q: "Upiši mjesec u godini.",
+      hint: "Primjeri: Siječanj, ožujak, svibanj, srpanj, kolovoz, prosinac.",
+      scores: {
+        "siječanj": { km: 60, alt: ["sijecanj"], info: "Siječanj (prvi mjesec u godini)" },
+        "prosinac": { km: 56, alt: [], info: "Prosinac (dvanaesti mjesec u godini)" },
+        "svibanj": { km: 48, alt: [], info: "Svibanj (peti mjesec u godini)" },
+        "kolovoz": { km: 45, alt: [], info: "Kolovoz (osmi mjesec u godini)" },
+        "ožujak": { km: 38, alt: ["ozujak"], info: "Ožujak (treći mjesec u godini)" },
+        "studeni": { km: 32, alt: [], info: "Studeni (jedanaesti mjesec u godini)" },
+        "veljača": { km: 22, alt: ["veljaca"], info: "Veljača (drugi mjesec u godini)" }
+      }
+    }
+  ];
+
+  const LIVES_QUESTIONS = [
+    { id: "l1", q: "Tko je napisao roman 'Zlatarovo zlato'?", opts: ["Miroslav Krleža", "August Šenoa", "Ivana Brlić-Mažuranić", "Tin Ujević"], ans: 1, km: 60, info: "August Šenoa objavio je 'Zlatarovo zlato' 1871. godine." },
+    { id: "l2", q: "Koji je najduži pritok Dunava?", opts: ["Sava", "Drava", "Tisa", "Morava"], ans: 2, km: 60, info: "Tisa je najduži pritok Dunava." },
+    { id: "l3", q: "Tko je bio prvi predsjednik Republike Hrvatske?", opts: ["Stjepan Mesić", "Franjo Tuđman", "Ivo Josipović", "Zoran Milanović"], ans: 1, km: 55, info: "Franjo Tuđman bio je prvi predsjednik Republike Hrvatske." },
+    { id: "l4", q: "Koji planet je najbliži Suncu?", opts: ["Venera", "Merkur", "Mars", "Zemlja"], ans: 1, km: 55, info: "Merkur je najbliži planet Suncu." },
+    { id: "l5", q: "U koje more utječe rijeka Dunav?", opts: ["Jadransko more", "Crno more", "Sjeverno more", "Baltičko more"], ans: 1, km: 60, info: "Dunav utječe u Crno more." },
+    { id: "l6", q: "Tko je napisao 'Priče iz davnine'?", opts: ["Ivana Brlić-Mažuranić", "Vladimir Nazor", "Marija Jurić Zagorka", "Ante Kovačić"], ans: 0, km: 60, info: "Ivana Brlić-Mažuranić napisala je 'Priče iz davnine' (1916.)." },
+    { id: "l7", q: "Koji kemijski element ima simbol 'Fe'?", opts: ["Fluor", "Željezo", "Francij", "Fosfor"], ans: 1, km: 55, info: "Fe dolazi od latinskog naziva ferrum (željezo)." },
+    { id: "l8", q: "Koji glavni grad leži na Dunavu?", opts: ["Prag", "Budimpešta", "Varšava", "Sofija"], ans: 1, km: 60, info: "Budimpešta se prostire na obje obale Dunava." }
+  ];
+
+  /* ORLJAVA (89 KM) — 6 SLAVONSKIH + OPĆA PITANJA */
+  const ORLJAVA_SLAVONIAN_POOL = [
+    {
+      id: "os1", cat: "NASELJA UZ ORLJAVU", q: "Upiši grad ili mjesto uz rijeku Orljavu.",
+      hint: "Požega, Pleternica, Brestovac, Lužani, Ciglenik, Slavonski Kobaš, Bučje, Bjelajci.",
+      ranks: [
+        { ans: "požega", alt: ["pozega"], rank: "Vrlo često", km: 2, tier: 0, info: "Požega (grad u Požeškoj kotlini uz Orljavu)" },
+        { ans: "pleternica", rank: "Često", km: 4, tier: 1, info: "Pleternica (grad na ušću Londže u Orljavu)" },
+        { ans: "brestovac", rank: "Poznato", km: 6, tier: 2, info: "Brestovac (mjesto zapadno od Požege)" },
+        { ans: "lužani", alt: ["luzani"], rank: "Srednje", km: 8, tier: 3, info: "Lužani (mjesto južno prema Savi)" },
+        { ans: "ciglenik", rank: "Rjeđe", km: 10, tier: 4, info: "Ciglenik (naselje u požeškom kraju)" },
+        { ans: "slavonski kobaš", alt: ["slavonski kobas", "kobas", "kobaš"], rank: "Vrlo rijetko", km: 12, tier: 5, info: "Slavonski Kobaš (ušće Orljave u Savu)" },
+        { ans: "bučje", alt: ["bucje"], rank: "Najrjeđe", km: 14, tier: 6, info: "Bučje (gornji tok i Psunj)" },
+        { ans: "bjelajci", rank: "Najrjeđe", km: 14, tier: 6, info: "Bjelajci (izvoršno područje na Psunju)" }
+      ]
+    },
+    {
+      id: "os2", cat: "PRITOCI ORLJAVE", q: "Upiši pritok rijeke Orljave.",
+      hint: "Veličanka, Londža, Orljavica, Vučjak, Brzaja.",
+      ranks: [
+        { ans: "veličanka", alt: ["velicanka"], rank: "Vrlo često", km: 3, tier: 0, info: "Veličanka (važan pritok Orljave)" },
+        { ans: "londža", alt: ["londza"], rank: "Često", km: 5, tier: 1, info: "Londža (utječe u Orljavu kod Pleternice)" },
+        { ans: "orljavica", rank: "Poznato", km: 7, tier: 2, info: "Orljavica (pritok u slijevu Orljave)" },
+        { ans: "vućjak", alt: ["vucjak"], rank: "Rjeđe", km: 11, tier: 4, info: "Vučjak (pritok Orljave)" },
+        { ans: "brzaja", rank: "Najrjeđe", km: 14, tier: 6, info: "Brzaja (pritok u slijevu Orljave)" }
+      ]
+    },
+    {
+      id: "os3", cat: "IZVOR I UŠĆE ORLJAVE", q: "Upiši pojam vezan uz izvor ili ušće rijeke Orljave.",
+      hint: "Psunj, Bjelajci, Bučje, Sava, Slavonski Kobaš.",
+      ranks: [
+        { ans: "sava", rank: "Vrlo često", km: 2, tier: 0, info: "Sava (rijeka u koju se Orljava ulijeva)" },
+        { ans: "psunj", rank: "Često", km: 4, tier: 1, info: "Psunj (planina na čijim obroncima izvire Orljava)" },
+        { ans: "slavonski kobaš", alt: ["slavonski kobas", "kobaš", "kobas"], rank: "Poznato", km: 7, tier: 2, info: "Slavonski Kobaš (ušće Orljave u Savu)" },
+        { ans: "bučje", alt: ["bucje"], rank: "Rjeđe", km: 11, tier: 4, info: "Bučje (gornji tok Orljave)" },
+        { ans: "bjelajci", rank: "Najrjeđe", km: 14, tier: 6, info: "Bjelajci (izvoršno područje na Psunju)" }
+      ]
+    },
+    {
+      id: "os4", cat: "GORE SLAVONIJE", q: "Upiši goru ili planinu u Slavoniji.",
+      hint: "Papuk, Psunj, Krndija, Dilj, Požeška gora.",
+      ranks: [
+        { ans: "papuk", rank: "Vrlo često", km: 3, tier: 0, info: "Papuk (Park prirode i najviša planina Slavonije)" },
+        { ans: "psunj", rank: "Često", km: 5, tier: 1, info: "Psunj (zapadnoslavonska gora)" },
+        { ans: "krndija", rank: "Poznato", km: 7, tier: 2, info: "Krndija (istočni nastavak Papuka)" },
+        { ans: "dilj", rank: "Rjeđe", km: 10, tier: 4, info: "Dilj (južna slavonska gora)" },
+        { ans: "požeška gora", alt: ["pozeska gora"], rank: "Najrjeđe", km: 14, tier: 6, info: "Požeška gora (južni rub Požeške kotline)" }
+      ]
+    },
+    {
+      id: "os5", cat: "POŽEŠKA KOTLINA", q: "Upiši mjesto u Požeštini.",
+      hint: "Požega, Pleternica, Kutjevo, Velika, Jakšić, Kaptol, Čaglin.",
+      ranks: [
+        { ans: "požega", alt: ["pozega"], rank: "Vrlo često", km: 2, tier: 0, info: "Požega (središte Požeške kotline)" },
+        { ans: "pleternica", rank: "Često", km: 4, tier: 1, info: "Pleternica (grad na istoku Požeške kotline)" },
+        { ans: "kutjevo", rank: "Poznato", km: 6, tier: 2, info: "Kutjevo (poznato vinogradarsko mjesto)" },
+        { ans: "velika", rank: "Srednje", km: 8, tier: 3, info: "Velika (mjesto podno Papuka)" },
+        { ans: "jakšić", alt: ["jaksic"], rank: "Rjeđe", km: 10, tier: 4, info: "Jakšić (općina u Požeštini)" },
+        { ans: "kaptol", rank: "Vrlo rijetko", km: 12, tier: 5, info: "Kaptol (mjesto podno Papuka)" },
+        { ans: "čaglin", alt: ["caglin"], rank: "Najrjeđe", km: 14, tier: 6, info: "Čaglin (općina u istočnom dijelu županije)" }
+      ]
+    },
+    {
+      id: "os6", cat: "SLAVONSKA TRADICIJA", q: "Upiši slavonsko jelo, piće ili običaj.",
+      hint: "Kulen, čvarci, čobanac, fiš, graševina, bećarac, tambura.",
+      ranks: [
+        { ans: "kulen", rank: "Vrlo često", km: 2, tier: 0, info: "Kulen (tradicionalni slavonski specijalitet)" },
+        { ans: "čvarci", alt: ["cvarci"], rank: "Često", km: 4, tier: 1, info: "Čvarci (tradicionalna delicija)" },
+        { ans: "čobanac", alt: ["cobanac"], rank: "Poznato", km: 6, tier: 2, info: "Čobanac (tradicionalni kotlić)" },
+        { ans: "fiš", alt: ["fis", "fis paprikas"], rank: "Srednje", km: 8, tier: 3, info: "Fiš paprikaš (riječno riblje jelo)" },
+        { ans: "graševina", alt: ["grasevina"], rank: "Rjeđe", km: 10, tier: 4, info: "Graševina (poznata sorta bijelog vina)" },
+        { ans: "bećarac", alt: ["becarac"], rank: "Vrlo rijetko", km: 12, tier: 5, info: "Bećarac (tradicionalna napjevna forma)" },
+        { ans: "tambura", rank: "Najrjeđe", km: 14, tier: 6, info: "Tambura (tradicionalno narodno glazbalo)" }
+      ]
+    }
+  ];
+
+  const ORLJAVA_RANDOM_POOL = [
+    {
+      id: "or_writers", cat: "PISCI", q: "Upiši pisca ili pjesnika.",
+      hint: "Krleža, Šenoa, Ujević, Cesarić, Nazor, Shakespeare.",
+      ranks: [
+        { ans: "miroslav krleža", alt: ["krleza"], rank: "Vrlo često", km: 2, tier: 0, info: "Miroslav Krleža" },
+        { ans: "august šenoa", alt: ["senoa"], rank: "Često", km: 4, tier: 1, info: "August Šenoa" },
+        { ans: "tin ujević", alt: ["tin ujevic", "ujevic"], rank: "Poznato", km: 6, tier: 2, info: "Tin Ujević" },
+        { ans: "dobriša cesarić", alt: ["dobrisa cesaric", "cesaric"], rank: "Rjeđe", km: 11, tier: 4, info: "Dobriša Cesarić" },
+        { ans: "william shakespeare", alt: ["shakespeare"], rank: "Najrjeđe", km: 14, tier: 6, info: "William Shakespeare" }
+      ]
+    },
+    {
+      id: "or_presidents", cat: "PREDSJEDNICI", q: "Upiši predsjednika države.",
+      hint: "Franjo Tuđman, Zoran Milanović, Stjepan Mesić, Ivo Josipović, Abraham Lincoln.",
+      ranks: [
+        { ans: "franjo tuđman", alt: ["franjo tudjman", "tudjman"], rank: "Vrlo često", km: 2, tier: 0, info: "Franjo Tuđman" },
+        { ans: "zoran milanović", alt: ["zoran milanovic", "milanovic"], rank: "Često", km: 4, tier: 1, info: "Zoran Milanović" },
+        { ans: "stjepan mesić", alt: ["stjepan mesic", "mesic"], rank: "Poznato", km: 6, tier: 2, info: "Stjepan Mesić" },
+        { ans: "ivo josipović", alt: ["ivo josipovic", "josipovic"], rank: "Rjeđe", km: 11, tier: 4, info: "Ivo Josipović" },
+        { ans: "abraham lincoln", alt: ["lincoln"], rank: "Najrjeđe", km: 14, tier: 6, info: "Abraham Lincoln" }
+      ]
+    },
+    {
+      id: "or_planets", cat: "PLANETI", q: "Upiši planet Sunčevog sustava.",
+      hint: "Zemlja, Mars, Jupiter, Saturn, Uran, Neptun.",
+      ranks: [
+        { ans: "zemlja", alt: [], rank: "Vrlo često", km: 2, tier: 0, info: "Zemlja" },
+        { ans: "mars", alt: [], rank: "Često", km: 4, tier: 1, info: "Mars" },
+        { ans: "jupiter", alt: [], rank: "Poznato", km: 6, tier: 2, info: "Jupiter" },
+        { ans: "saturn", alt: [], rank: "Srednje", km: 8, tier: 3, info: "Saturn" },
+        { ans: "uran", alt: [], rank: "Rjeđe", km: 11, tier: 4, info: "Uran" },
+        { ans: "neptun", alt: [], rank: "Najrjeđe", km: 14, tier: 6, info: "Neptun" }
+      ]
+    },
+    {
+      id: "or_sports", cat: "SPORTOVI", q: "Upiši sport.",
+      hint: "Nogomet, košarka, tenis, rukomet, mačevanje, karling.",
+      ranks: [
+        { ans: "nogomet", alt: [], rank: "Vrlo često", km: 2, tier: 0, info: "Nogomet" },
+        { ans: "košarka", alt: ["kosarka"], rank: "Često", km: 4, tier: 1, info: "Košarka" },
+        { ans: "tenis", alt: [], rank: "Poznato", km: 6, tier: 2, info: "Tenis" },
+        { ans: "rukomet", alt: [], rank: "Srednje", km: 8, tier: 3, info: "Rukomet" },
+        { ans: "mačevanje", alt: ["macevanje"], rank: "Rjeđe", km: 11, tier: 4, info: "Mačevanje" },
+        { ans: "karling", alt: [], rank: "Najrjeđe", km: 14, tier: 6, info: "Karling" }
+      ]
+    },
+    {
+      id: "or_weather", cat: "VREMENSKE PRILIKE", q: "Upiši vremensku pojavu.",
+      hint: "Kiša, sunce, snijeg, vjetar, magla, tuča.",
+      ranks: [
+        { ans: "kiša", alt: ["kisa"], rank: "Vrlo često", km: 2, tier: 0, info: "Kiša" },
+        { ans: "sunce", alt: [], rank: "Često", km: 4, tier: 1, info: "Sunce" },
+        { ans: "snijeg", alt: [], rank: "Poznato", km: 6, tier: 2, info: "Snijeg" },
+        { ans: "vjetar", alt: [], rank: "Srednje", km: 8, tier: 3, info: "Vjetar" },
+        { ans: "magla", alt: [], rank: "Rjeđe", km: 11, tier: 4, info: "Magla" },
+        { ans: "tuča", alt: ["tuca"], rank: "Najrjeđe", km: 14, tier: 6, info: "Tuča" }
+      ]
+    }
+  ];
+
+  const ALL_ORLJAVA_QUESTIONS = [...ORLJAVA_SLAVONIAN_POOL, ...ORLJAVA_RANDOM_POOL];
+
+  function shuffleArray(arr) {
+    const c = arr.slice();
+    for (let i = c.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [c[i], c[j]] = [c[j], c[i]];
+    }
+    return c;
+  }
+
+  function buildOrljavaRoundQueue() {
+    const slav = shuffleArray(ORLJAVA_SLAVONIAN_POOL).slice(0, 6);
+    const rand = shuffleArray(ORLJAVA_RANDOM_POOL).slice(0, 4);
+    return shuffleArray([...slav, ...rand]).map(q => q.id);
+  }
+
+  const makeModeObj = () => ({
+    km: 0, bestKm: 0, qInRound: 0, currentId: null, lives: 3, streak: 0, finished: false, roundQueue: [], seenIds: [], history: []
+  });
+
+  const freshState = () => ({
+    mode: "rare",
+    lang: "hr",
+    camera: "follow",
+    dailyQuiz: { dateKey: getTodayKey(), pickedIndex: null, elapsedSec: 0 },
+    settings: { sound: true, volume: 75, autoNext: true, speed: "normal" },
+    modes: { rare: makeModeObj(), common: makeModeObj(), lives: makeModeObj(), orljava: makeModeObj() }
+  });
+
+  let state = JSON.parse(localStorage.getItem("game2850_unique_v4")) || freshState();
+  ["rare", "common", "lives", "orljava"].forEach(k => {
+    state.modes[k] = Object.assign(makeModeObj(), state.modes[k] || {});
+    state.modes[k].bestKm = Math.max(state.modes[k].bestKm || 0, state.modes[k].km || 0);
+    if (!Array.isArray(state.modes[k].seenIds)) state.modes[k].seenIds = [];
+  });
+  if (!state.dailyQuiz) state.dailyQuiz = { dateKey: getTodayKey(), pickedIndex: null, elapsedSec: 0 };
+  if (state.settings.volume === undefined) state.settings.volume = 75;
+
+  let mapReady = false, leafletMap = null, routePolyline = null, cityMarkersLayer = null, duckMarker = null;
+  let animKm = state.modes[state.mode].km, rafHandle = null;
+  let selectedTier = null, inputLocked = false, autoAdvanceTimer = null, showingRoundReview = false;
+  let qotdStartTime = performance.now(), qotdTimerInterval = null;
+
+  function persist() {
+    localStorage.setItem("game2850_unique_v4", JSON.stringify(state));
+    refreshMenuCards();
+  }
+
+  function refreshMenuCards() {
+    const l = state.lang || "hr";
+    const r = state.modes.rare, c = state.modes.common, lv = state.modes.lives, o = state.modes.orljava;
+    document.getElementById("mStatRare").textContent = trStr(`${Math.round(r.km)} / 2850 km`, l);
+    document.getElementById("mStatCommon").textContent = trStr(`${Math.round(c.km)} / 2850 km`, l);
+    document.getElementById("mStatLives").textContent = trStr(`${Math.round(lv.km)} / 2850 km • 🏆 ${Math.round(lv.bestKm)} km • 🔥 ${lv.streak}`, l);
+    document.getElementById("mStatOrljava").textContent = trStr(`${Math.round(o.km)} / 89 km`, l);
+  }
+
+  function initDailyQuiz() {
+    const today = getTodayKey();
+    if (state.dailyQuiz.dateKey !== today) {
+      state.dailyQuiz = { dateKey: today, pickedIndex: null, elapsedSec: 0 };
+      persist();
+    }
+    updateNextDailyCountdown();
+    const quiz = getTodayHardQuiz();
+    const l = state.lang || "hr";
+    const letters = ["A", "B", "C", "D"];
+    const isLocked = state.dailyQuiz.pickedIndex !== null;
+
+    document.getElementById("qotdTag").textContent = trStr("📅 Pitanje dana • Težak kviz", l);
+    document.getElementById("qotdQuestionTitle").textContent = trStr(quiz.q, l);
+
+    const optWrap = document.getElementById("qotdAbcdOptions");
+    optWrap.innerHTML = quiz.options.map((label, i) => {
+      let extraClass = "";
+      let icon = "";
+      if (isLocked) {
+        if (i === quiz.correctIndex) {
+          extraClass = "correct-anim";
+          icon = "✓ Točno";
+        } else if (i === state.dailyQuiz.pickedIndex && i !== quiz.correctIndex) {
+          extraClass = "wrong-anim";
+          icon = "✕ Tvoj odabir";
+        }
+      }
+      return `
+        <button class="abcd-btn ${extraClass}" ${isLocked ? "disabled" : ""} onclick="answerDailyQuiz(${i})">
+          <span class="abcd-btn-left">
+            <span class="abcd-letter">${letters[i]}</span>
+            <span>${trStr(label, l)}</span>
+          </span>
+          <span style="font-size:0.8rem; font-weight:800;">${trStr(icon, l)}</span>
+        </button>
+      `;
+    }).join("");
+
+    clearInterval(qotdTimerInterval);
+    const timerEl = document.getElementById("qotdTimer");
+    const lockedBox = document.getElementById("qotdLockedBox");
+    const badgeEl = document.getElementById("qotdResultBadge");
+
+    if (isLocked) {
+      timerEl.textContent = `⏱️ ${state.dailyQuiz.elapsedSec.toFixed(1)} s • 🔒`;
+      const isCorrect = state.dailyQuiz.pickedIndex === quiz.correctIndex;
+      document.getElementById("qotdPickedLabel").textContent = trStr("Zaključano — točan odgovor:", l);
+      document.getElementById("qotdPickedValue").textContent = trStr(`${letters[quiz.correctIndex]}. ${quiz.options[quiz.correctIndex]}`, l);
+      badgeEl.className = "result-badge " + (isCorrect ? "ok" : "bad");
+      badgeEl.textContent = trStr(isCorrect ? "🎉 Pogodio si točan odgovor!" : `Pogrešno (odabrao si ${letters[state.dailyQuiz.pickedIndex]})`, l);
+      lockedBox.classList.add("show");
+    } else {
+      lockedBox.classList.remove("show");
+      qotdStartTime = performance.now();
+      timerEl.textContent = "⏱️ 0.0 s";
+      qotdTimerInterval = setInterval(() => {
+        if (state.dailyQuiz.pickedIndex !== null) {
+          clearInterval(qotdTimerInterval);
+          return;
+        }
+        const sec = (performance.now() - qotdStartTime) / 1000;
+        timerEl.textContent = `⏱️ ${sec.toFixed(1)} s`;
+      }, 100);
+    }
+  }
+
+  function answerDailyQuiz(idx) {
+    if (state.dailyQuiz.pickedIndex !== null) return;
+    const quiz = getTodayHardQuiz();
+    const elapsed = (performance.now() - qotdStartTime) / 1000;
+    state.dailyQuiz.pickedIndex = idx;
+    state.dailyQuiz.elapsedSec = Number(elapsed.toFixed(1));
+    persist();
+
+    if (idx === quiz.correctIndex) {
+      playSound("finish");
+      launchConfetti();
+    } else {
+      playSound("bad");
+    }
+    initDailyQuiz();
+  }
+
+  function changeLanguage(newLang) {
+    playSound("click");
+    state.lang = newLang;
+    persist();
+    refreshMenuCards();
+    initDailyQuiz();
+    if (document.getElementById("gameLayout").classList.contains("active")) updateHudAndMap(false);
+  }
+
+  function openModal(kind) {
+    playSound("click");
+    const modal = document.getElementById("infoModal");
+    const titleEl = document.getElementById("modalTitle");
+    const bodyEl = document.getElementById("modalBody");
+    const l = state.lang || "hr";
+
+    if (kind === "settings") {
+      titleEl.textContent = trStr("⚙️ Postavke igre", l);
+      bodyEl.innerHTML = trStr(`
+        <div class="setting-item" style="margin-bottom:10px;">
+          <div class="setting-top">
+            <span>Zvuk i efekti</span>
+            <button class="toggle-btn ${state.settings.sound ? "on" : ""}" onclick="toggleSetting('sound'); openModal('settings');">${state.settings.sound ? "UKLJUČENO" : "ISKLJUČENO"}</button>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted);">
+            <span>Glasnoća</span>
+            <span id="modalVolVal">${state.settings.volume}%</span>
+          </div>
+          <input class="vol-slider" type="range" min="0" max="100" value="${state.settings.volume}" oninput="setVolume(this.value); document.getElementById('modalVolVal').textContent=this.value+'%';" />
+        </div>
+        <div class="setting-item" style="margin-bottom:10px;">
+          <div class="setting-top">
+            <span>Automatski sljedeći zadatak</span>
+            <button class="toggle-btn ${state.settings.autoNext ? "on" : ""}" onclick="toggleSetting('autoNext'); openModal('settings');">${state.settings.autoNext ? "UKLJUČENO" : "ISKLJUČENO"}</button>
+          </div>
+        </div>
+        <div class="setting-item" style="margin-bottom:12px;">
+          <div class="setting-top"><span>Brzina animacije patke</span></div>
+          <div class="speed-group">
+            <button class="speed-btn ${state.settings.speed === "slow" ? "active" : ""}" onclick="setSpeed('slow'); openModal('settings');">Sporo</button>
+            <button class="speed-btn ${state.settings.speed === "normal" ? "active" : ""}" onclick="setSpeed('normal'); openModal('settings');">Normalno</button>
+            <button class="speed-btn ${state.settings.speed === "fast" ? "active" : ""}" onclick="setSpeed('fast'); openModal('settings');">Brzo</button>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="go-btn" onclick="closeModal(); enterGame(state.mode);">▶ Nastavi igru</button>
+          <button class="danger-btn" style="width:auto;" onclick="resetAllModes(); closeModal();">🗑️ Resetiraj sav napredak</button>
+        </div>
+      `, l);
+    } else if (kind === "rules") {
+      titleEl.textContent = trStr("Pravila igre", l);
+      bodyEl.innerHTML = trStr(`<ul><li><strong>Bez ponavljanja:</strong> pitanja se biraju redom bez ponavljanja dok ne prođeš cijeli skup.</li><li><strong>Što rjeđe (2850 km):</strong> rjeđi odgovori nose više km.</li><li><strong>Što češće (2850 km):</strong> češći odgovori nose više km.</li><li><strong>Kviz (3 života):</strong> prati High score i niz točnih odgovora.</li><li><strong>Orljava (89 km):</strong> 6 slavonskih i 4 opća pitanja po rundi.</li></ul>`, l);
+    } else if (kind === "faq") {
+      titleEl.textContent = trStr("Česta pitanja", l);
+      bodyEl.innerHTML = trStr(`<p><strong>Gdje objaviti stranicu i može li se ažurirati?</strong><br>Možeš je objaviti besplatno na GitHub Pages, Netlify ili Vercel, i kad god zamijeniš <code>index.html</code>, stranica se ažurira.</p>`, l);
+    } else {
+      titleEl.textContent = trStr("Pošalji upit", l);
+      bodyEl.innerHTML = trStr(`<input class="field-input" type="text" id="inqName" placeholder="Tvoje ime" /><textarea class="field-textarea" id="inqMsg" placeholder="Upiši svoj upit ili prijedlog..."></textarea><button class="go-btn" onclick="submitInquiry()">Pošalji</button><div class="status-note" id="inqStatus"></div>`, l);
+    }
+    modal.classList.add("open");
+  }
+
+  function closeModal() {
+    playSound("click");
+    document.getElementById("infoModal").classList.remove("open");
+  }
+
+  function submitInquiry() {
+    const msg = (document.getElementById("inqMsg").value || "").trim();
+    const st = document.getElementById("inqStatus");
+    if (!msg) return;
+    playSound("good");
+    if (st) st.textContent = "Upit spremljen.";
+  }
+
+  function getBankForMode(modeKey = state.mode) {
+    if (modeKey === "rare") return RARE_QUESTIONS;
+    if (modeKey === "common") return COMMON_QUESTIONS;
+    if (modeKey === "orljava") return ALL_ORLJAVA_QUESTIONS;
+    return LIVES_QUESTIONS;
+  }
+
+  /* NIKAD NE PONAVLJA DOK NE PROĐE SVA PITANJA U BAZENU */
+  function pickQuestionForStep(modeKey = state.mode) {
+    const mData = state.modes[modeKey];
+    if (modeKey === "orljava") {
+      if (!Array.isArray(mData.roundQueue) || mData.roundQueue.length !== ROUND_SIZE) {
+        mData.roundQueue = buildOrljavaRoundQueue();
+      }
+      const qid = mData.roundQueue[Math.min(ROUND_SIZE - 1, mData.qInRound)];
+      mData.currentId = qid;
+      return ALL_ORLJAVA_QUESTIONS.find(x => x.id === qid) || ALL_ORLJAVA_QUESTIONS[0];
+    }
+
+    const bank = getBankForMode(modeKey);
+    let unseen = bank.filter(item => !mData.seenIds.includes(item.id) && item.id !== mData.currentId);
+    if (!unseen.length) {
+      mData.seenIds = [];
+      unseen = bank.filter(item => item.id !== mData.currentId);
+      if (!unseen.length) unseen = bank;
+    }
+    const chosen = shuffleArray(unseen)[0];
+    mData.currentId = chosen.id;
+    if (!mData.seenIds.includes(chosen.id)) mData.seenIds.push(chosen.id);
+    return chosen;
+  }
+
+  function getActiveQuestion(modeKey = state.mode) {
+    const bank = getBankForMode(modeKey);
+    const found = bank.find(item => item.id === state.modes[modeKey].currentId);
+    return found || pickQuestionForStep(modeKey);
+  }
+
+  function getReachedCityName(prevKm, nextKm, modeKey) {
+    const cities = getRouteForMode(modeKey);
+    for (let i = 1; i < cities.length; i++) {
+      if (prevKm < cities[i].km && nextKm >= cities[i].km) return cities[i].name;
+    }
+    return null;
+  }
+
+  function bumpStreak(mData, ok) {
+    mData.streak = ok ? mData.streak + 1 : 0;
+    if (ok && mData.streak > 0 && mData.streak % 10 === 0) playSound("streak10");
+  }
+
+  function initMapOnce() {
+    if (mapReady) return;
+    leafletMap = L.map("mapCanvas", { zoomControl: true }).setView([45.32, 17.75], 10);
+    L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", { attribution: "Tiles &copy; Esri" }).addTo(leafletMap);
+    routePolyline = L.polyline([], { color: "#db2777", weight: 5, opacity: 0.92 }).addTo(leafletMap);
+    cityMarkersLayer = L.layerGroup().addTo(leafletMap);
+    const icon = L.divIcon({
+      className: "",
+      html: `<div class="duck-map-wrap"><div class="duck-sprite" id="duckSprite">${buildPixelDuck(38)}</div></div>`,
+      iconSize: [46, 46], iconAnchor: [23, 23]
+    });
+    duckMarker = L.marker([ORLJAVA_CITIES[0].lat, ORLJAVA_CITIES[0].lng], { icon, zIndexOffset: 650 }).addTo(leafletMap);
+    mapReady = true;
+  }
+
+  function rebuildRouteOnMap(modeKey, snap = false) {
+    if (!mapReady) return;
+    const cities = getRouteForMode(modeKey);
+    routePolyline.setLatLngs(cities.map(c => [c.lat, c.lng]));
+    cityMarkersLayer.clearLayers();
+    cities.forEach(c => {
+      L.circleMarker([c.lat, c.lng], { radius: 5, color: "#0f172a", weight: 1.5, fillColor: "#facc15", fillOpacity: 1 }).addTo(cityMarkersLayer);
+    });
+    const pos = getCoordsForKm(animKm, modeKey);
+    duckMarker.setLatLng(pos);
+    if (snap && leafletMap) {
+      if (state.camera === "follow") leafletMap.setView(pos, modeKey === "orljava" ? 10 : 7, { animate: true });
+      else leafletMap.fitBounds(routePolyline.getBounds(), { padding: [30, 30] });
+    }
+  }
+
+  function enterGame(modeKey) {
+    clearTimeout(autoAdvanceTimer);
+    cancelAnimationFrame(rafHandle);
+    inputLocked = false;
+    showingRoundReview = false;
+    selectedTier = null;
+    document.getElementById("feedbackBar").style.display = "none";
+    document.getElementById("manualNextBtn").style.display = "none";
+
+    state.mode = modeKey;
+    if (modeKey === "orljava" && (!Array.isArray(state.modes.orljava.roundQueue) || state.modes.orljava.roundQueue.length !== ROUND_SIZE)) {
+      state.modes.orljava.roundQueue = buildOrljavaRoundQueue();
+    }
+    if (!state.modes[modeKey].currentId) pickQuestionForStep(modeKey);
+    animKm = state.modes[modeKey].km;
+    persist();
+
+    document.getElementById("mainMenu").style.display = "none";
+    document.getElementById("gameLayout").classList.add("active");
+    initMapOnce();
+    syncSettingsUI();
+    setTimeout(() => {
+      leafletMap.invalidateSize();
+      rebuildRouteOnMap(modeKey, true);
+      updateHudAndMap(false);
+      renderTask(false);
+    }, 40);
+  }
+
+  function goToMenu() {
+    clearTimeout(autoAdvanceTimer);
+    cancelAnimationFrame(rafHandle);
+    document.getElementById("gameLayout").classList.remove("active");
+    document.getElementById("mainMenu").style.display = "block";
+    refreshMenuCards();
+    initDailyQuiz();
+  }
+
+  function switchMode(modeKey) { enterGame(modeKey); }
+
+  function setCam(camKey) {
+    state.camera = camKey;
+    document.getElementById("camFollow").classList.toggle("active", camKey === "follow");
+    document.getElementById("camFull").classList.toggle("active", camKey === "full");
+    persist();
+    rebuildRouteOnMap(state.mode, true);
+  }
+
+  function getCoordsForKm(kmVal, modeKey = state.mode) {
+    const totalKm = getTotalKmForMode(modeKey);
+    const cities = getRouteForMode(modeKey);
+    const clamped = Math.max(0, Math.min(totalKm, kmVal));
+    for (let i = 0; i < cities.length - 1; i++) {
+      if (clamped >= cities[i].km && clamped <= cities[i + 1].km) {
+        const p = (clamped - cities[i].km) / (cities[i + 1].km - cities[i].km || 1);
+        return [cities[i].lat + (cities[i + 1].lat - cities[i].lat) * p, cities[i].lng + (cities[i + 1].lng - cities[i].lng) * p];
+      }
+    }
+    return [cities[cities.length - 1].lat, cities[cities.length - 1].lng];
+  }
+
+  function getSpeedMs() {
+    return state.settings.speed === "slow" ? 1800 : state.settings.speed === "fast" ? 600 : 1100;
+  }
+
+  function glideDuckTo(targetKm, reachedCity, onDone) {
+    cancelAnimationFrame(rafHandle);
+    const fromKm = animKm;
+    const toKm = Math.max(0, Math.min(getTotalKmForMode(state.mode), targetKm));
+    playSound(reachedCity ? "city" : "good");
+    const sp = document.getElementById("duckSprite");
+    if (sp) sp.classList.add("walk");
+    const dur = getSpeedMs();
+    const t0 = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      const ease = 1 - Math.pow(1 - t, 3);
+      animKm = fromKm + (toKm - fromKm) * ease;
+      const pos = getCoordsForKm(animKm, state.mode);
+      if (duckMarker) duckMarker.setLatLng(pos);
+      if (state.camera === "follow" && leafletMap) leafletMap.panTo(pos, { animate: false });
+      if (t < 1) rafHandle = requestAnimationFrame(frame);
+      else {
+        animKm = toKm;
+        if (duckMarker) duckMarker.setLatLng(getCoordsForKm(animKm, state.mode));
+        if (sp) sp.classList.remove("walk");
+        if (onDone) onDone();
+      }
+    }
+    rafHandle = requestAnimationFrame(frame);
+  }
+
+  function updateHudAndMap(snap = false) {
+    const l = state.lang || "hr";
+    const totalKm = getTotalKmForMode(state.mode);
+    const cities = getRouteForMode(state.mode);
+    const mData = state.modes[state.mode];
+    const km = Math.min(totalKm, mData.km);
+    if (duckMarker) duckMarker.setLatLng(getCoordsForKm(animKm, state.mode));
+    if (snap && leafletMap) rebuildRouteOnMap(state.mode, true);
+
+    let cur = cities[0], nextList = [];
+    for (let i = 0; i < cities.length; i++) {
+      if (km >= cities[i].km) cur = cities[i];
+      else nextList.push(cities[i]);
+    }
+    if (!nextList.length) nextList = [{ name: "Cilj postignut!", km: totalKm }];
+
+    document.getElementById("stripLogo").textContent = trStr(state.mode === "orljava" ? "Orljava 89 km" : "2850 km", l);
+    document.getElementById("hudCity").textContent = trStr(cur.name, l);
+    document.getElementById("hudKm").textContent = trStr(`${Math.round(km)} km od ${totalKm} km`, l);
+    document.getElementById("hudSign").innerHTML = nextList.slice(0, 3).map(c => `<div class="sign-item"><span>${trStr(c.name, l)}</span><span>${Math.max(0, Math.round(c.km - km))} km</span></div>`).join("");
+
+    ["rare", "common", "lives", "orljava"].forEach(k => document.getElementById("tab-" + k).classList.toggle("active", state.mode === k));
+    document.getElementById("qProgress").textContent = trStr(km >= totalKm ? "Cilj osvojen" : `Pitanje ${Math.min(ROUND_SIZE, mData.qInRound + 1)} / ${ROUND_SIZE}`, l);
+
+    const isLives = state.mode === "lives";
+    const streakEl = document.getElementById("streakBadge");
+    const bestEl = document.getElementById("bestBadge");
+    streakEl.classList.toggle("show-lives", isLives);
+    bestEl.classList.toggle("show-lives", isLives);
+    if (isLives) {
+      streakEl.textContent = trStr(`🔥 Niz točnih: ${mData.streak}`, l);
+      bestEl.textContent = trStr(`🏆 High score: ${Math.round(mData.bestKm)} km`, l);
+    }
+
+    document.getElementById("modeRightMeta").textContent = trStr(isLives ? `${"❤️".repeat(Math.max(0, mData.lives))} • ${Math.round(km)}/${totalKm} km` : `${Math.round(km)}/${totalKm} km`, l);
+  }
+
+  function getScaleItems(modeKey) {
+    const names = ["Vrlo često", "Često", "Poznato", "Srednje", "Rjeđe", "Vrlo rijetko", "Najrjeđe"];
+    const pts = modeKey === "orljava" ? [2, 4, 6, 8, 10, 12, 14] : modeKey === "rare" ? [6, 12, 20, 32, 45, 60, 75] : [5, 12, 20, 30, 42, 54, 65];
+    const commonNames = ["Vrlo rijetko", "Rijetko", "Neobično", "Povremeno", "Često", "Vrlo često", "Najčešće"];
+    return pts.map((km, i) => ({ label: modeKey === "common" ? commonNames[i] : names[i], km }));
+  }
+
+  function renderScaleHTML(items) {
+    const l = state.lang || "hr";
+    return `<div class="tiers-row">${items.map((it, i) => `<div class="tier-card ${selectedTier === i ? "active" : ""}"><div class="tier-lbl">${trStr(it.label, l)}</div><div class="tier-val">+${it.km} km</div></div>`).join("")}</div>`;
+  }
+
+  function renderRoundReview() {
+    showingRoundReview = true;
+    const l = state.lang || "hr";
+    const mData = state.modes[state.mode];
+    const slot = document.getElementById("questionSlot");
+    slot.innerHTML = `
+      <h2 class="task-q">${trStr("Pregled runde", l)}</h2>
+      <div class="review-list">${mData.history.map(h => `<div class="review-card"><div class="review-top"><div><div class="review-cat">${trStr(h.cat, l)}</div><div class="review-ans">${trStr(h.answer, l)} (${trStr(h.rankLabel, l)})</div>${h.info ? `<div class="task-hint" style="margin:3px 0 0;">${trStr(h.info, l)}</div>` : ""}</div><span class="review-pts">${h.gained > 0 ? "+" + h.gained + " km" : "0 km"}</span></div></div>`).join("")}</div>
+      <div class="input-bar"><button class="go-btn" onclick="startFreshRound()">${trStr("Nova runda", l)}</button><button class="sec-btn" onclick="goToMenu()">${trStr("Početni zaslon", l)}</button></div>
+    `;
+  }
+
+  function renderTask(preserve = false) {
+    const l = state.lang || "hr";
+    const mData = state.modes[state.mode];
+    const totalKm = getTotalKmForMode(state.mode);
+    const slot = document.getElementById("questionSlot");
+    const prev = preserve && document.getElementById("ansField") ? document.getElementById("ansField").value : "";
+
+    if (mData.km >= totalKm || mData.finished) {
+      slot.innerHTML = trStr(`<div class="finished-banner"><h2 class="task-q" style="color:var(--gold);">🎉 Cilj osvojen (${totalKm} km)!</h2></div><div class="input-bar"><button class="go-btn" onclick="resetCurrentMode()">Igraj ponovno</button><button class="sec-btn" onclick="goToMenu()">Početni zaslon</button></div>`, l);
+      return;
+    }
+    if (mData.qInRound >= ROUND_SIZE || (state.mode === "lives" && mData.lives <= 0)) {
+      renderRoundReview();
+      return;
+    }
+    showingRoundReview = false;
+    const q = getActiveQuestion(state.mode);
+
+    if (state.mode === "rare" || state.mode === "orljava") {
+      slot.innerHTML = `<div class="task-hint" style="color:var(--sky); font-weight:800;">${trStr(q.cat, l)}</div><h2 class="task-q">${trStr(q.q, l)}</h2><p class="task-hint">${trStr(q.hint, l)}</p><div class="input-bar"><input class="ans-box" type="text" id="ansField" value="${prev.replace(/"/g, "&quot;")}" placeholder="${trStr("Upiši odgovor...", l)}" onkeydown="if(event.key==='Enter') answerRareOrOrljava()" /><button class="go-btn" onclick="answerRareOrOrljava()">${trStr("Potvrdi", l)}</button><button class="skip-btn" onclick="skipCurrentQuestion()">${trStr("Preskoči", l)}</button></div>${renderScaleHTML(getScaleItems(state.mode))}`;
+      setTimeout(() => { const el = document.getElementById("ansField"); if (el && !inputLocked) el.focus(); }, 25);
+    } else if (state.mode === "common") {
+      slot.innerHTML = `<div class="task-hint" style="color:var(--gold); font-weight:800;">${trStr(q.cat, l)}</div><h2 class="task-q">${trStr(q.q, l)}</h2><p class="task-hint">${trStr(q.hint, l)}</p><div class="input-bar"><input class="ans-box" type="text" id="ansField" value="${prev.replace(/"/g, "&quot;")}" placeholder="${trStr("Upiši odgovor...", l)}" onkeydown="if(event.key==='Enter') answerCommon()" /><button class="go-btn" onclick="answerCommon()">${trStr("Potvrdi", l)}</button><button class="skip-btn" onclick="skipCurrentQuestion()">${trStr("Preskoči", l)}</button></div>${renderScaleHTML(getScaleItems("common"))}`;
+      setTimeout(() => { const el = document.getElementById("ansField"); if (el && !inputLocked) el.focus(); }, 25);
+    } else {
+      slot.innerHTML = `<h2 class="task-q">${trStr(q.q, l)}</h2><div class="opts-2col">${q.opts.map((o, i) => `<button class="opt-choice" onclick="answerLives(${i}, this)">${trStr(o, l)}</button>`).join("")}</div>`;
+    }
+  }
+
+  function showBanner(msg, kmTxt, invalid = false) {
+    const l = state.lang || "hr";
+    const bar = document.getElementById("feedbackBar");
+    bar.style.display = "flex";
+    bar.classList.toggle("invalid", invalid);
+    document.getElementById("feedbackMsg").textContent = trStr(msg, l);
+    document.getElementById("feedbackKm").textContent = trStr(kmTxt, l);
+  }
+
+  function skipCurrentQuestion() {
+    if (inputLocked || showingRoundReview || isRouteCompleted()) return;
+    playSound("click");
+    inputLocked = true;
+    const mData = state.modes[state.mode];
+    const q = getActiveQuestion(state.mode);
+    bumpStreak(mData, false);
+    mData.history.push({ qId: q.id, cat: q.cat || "KVIZ", answer: "Preskočeno", rankLabel: "Preskočeno", gained: 0, info: "" });
+    persist();
+    updateHudAndMap(false);
+    showBanner("Preskočeno", "0 km", false);
+    queueNextStep();
+  }
+
+  function advanceQuestion() {
+    clearTimeout(autoAdvanceTimer);
+    if (isRouteCompleted()) return;
+    inputLocked = false;
+    selectedTier = null;
+    document.getElementById("feedbackBar").style.display = "none";
+    document.getElementById("manualNextBtn").style.display = "none";
+    state.modes[state.mode].qInRound += 1;
+    pickQuestionForStep(state.mode);
+    persist();
+    updateHudAndMap(false);
+    renderTask(false);
+  }
+
+  function queueNextStep() {
+    clearTimeout(autoAdvanceTimer);
+    if (isRouteCompleted()) return;
+    if (state.settings.autoNext) autoAdvanceTimer = setTimeout(advanceQuestion, getSpeedMs() + 250);
+    else document.getElementById("manualNextBtn").style.display = "inline-block";
+  }
+
+  function answerRareOrOrljava() {
+    if (inputLocked || isRouteCompleted()) return;
+    const raw = document.getElementById("ansField").value.trim();
+    if (!raw) return;
+    const modeKey = state.mode;
+    const totalKm = getTotalKmForMode(modeKey);
+    const mData = state.modes[modeKey];
+    const q = getActiveQuestion(modeKey);
+    const matched = (q.ranks || []).find(r => [r.ans, ...(r.alt || [])].some(f => normText(f) === normText(raw)));
+    if (!matched) {
+      playSound("bad");
+      const sug = findClosestSuggestion(raw, (q.ranks || []).map(r => r.ans));
+      showBanner(sug ? `Jesi mislio na: ${sug}?` : `"${raw}" nije na popisu`, "", true);
+      return;
+    }
+    inputLocked = true;
+    selectedTier = matched.tier;
+    const prevKm = mData.km;
+    bumpStreak(mData, true);
+    mData.km = Math.min(totalKm, mData.km + matched.km);
+    mData.bestKm = Math.max(mData.bestKm || 0, mData.km);
+    const reachedCity = getReachedCityName(prevKm, mData.km, modeKey);
+    mData.history.push({ qId: q.id, cat: q.cat, answer: formatDisplayWord(matched.ans), rankLabel: matched.rank, gained: matched.km, info: matched.info || "" });
+    const doneGoal = mData.km >= totalKm;
+    persist();
+    updateHudAndMap(false);
+    showBanner(`${matched.info || formatDisplayWord(matched.ans)} • ${matched.rank}`, `+${matched.km} km`, false);
+    glideDuckTo(mData.km, reachedCity, () => {
+      if (doneGoal) { mData.finished = true; playSound("finish"); launchConfetti(); persist(); renderTask(false); }
+      else { renderTask(true); queueNextStep(); }
+    });
+  }
+
+  function answerCommon() {
+    if (inputLocked || isRouteCompleted()) return;
+    const raw = document.getElementById("ansField").value.trim();
+    if (!raw) return;
+    const totalKm = getTotalKmForMode("common");
+    const mData = state.modes.common;
+    const q = getActiveQuestion("common");
+    const entries = Object.entries(q.scores || {});
+    let matchedKey = null, matchedInfo = null;
+    for (const [k, info] of entries) {
+      if ([k, ...(info.alt || [])].some(f => normText(f) === normText(raw))) { matchedKey = k; matchedInfo = info; break; }
+    }
+    if (!matchedInfo) {
+      playSound("bad");
+      const sug = findClosestSuggestion(raw, entries.map(([k]) => k));
+      showBanner(sug ? `Jesi mislio na: ${sug}?` : `"${raw}" nije na popisu`, "", true);
+      return;
+    }
+    const pts = matchedInfo.km;
+    inputLocked = true;
+    selectedTier = Math.max(0, Math.min(6, Math.round((pts / 65) * 6)));
+    const prevKm = mData.km;
+    bumpStreak(mData, true);
+    mData.km = Math.min(totalKm, mData.km + pts);
+    mData.bestKm = Math.max(mData.bestKm || 0, mData.km);
+    const reachedCity = getReachedCityName(prevKm, mData.km, "common");
+    mData.history.push({ qId: q.id, cat: q.cat, answer: formatDisplayWord(matchedKey), rankLabel: getScaleItems("common")[selectedTier].label, gained: pts, info: matchedInfo.info || "" });
+    const doneGoal = mData.km >= totalKm;
+    persist();
+    updateHudAndMap(false);
+    showBanner(matchedInfo.info || formatDisplayWord(matchedKey), `+${pts} km`, false);
+    glideDuckTo(mData.km, reachedCity, () => {
+      if (doneGoal) { mData.finished = true; playSound("finish"); launchConfetti(); persist(); renderTask(false); }
+      else { renderTask(true); queueNextStep(); }
+    });
+  }
+
+  function answerLives(idx, btn) {
+    if (inputLocked || isRouteCompleted()) return;
+    inputLocked = true;
+    const totalKm = getTotalKmForMode("lives");
+    const mData = state.modes.lives;
+    const q = getActiveQuestion("lives");
+    document.querySelectorAll(".opt-choice").forEach(b => b.disabled = true);
+    if (idx === q.ans) {
+      btn.classList.add("ok");
+      const prevKm = mData.km;
+      bumpStreak(mData, true);
+      mData.km = Math.min(totalKm, mData.km + q.km);
+      mData.bestKm = Math.max(mData.bestKm || 0, mData.km);
+      const reachedCity = getReachedCityName(prevKm, mData.km, "lives");
+      mData.history.push({ qId: q.id, cat: "KVIZ", answer: q.opts[idx], rankLabel: "Točno", gained: q.km, info: q.info || "" });
+      const doneGoal = mData.km >= totalKm;
+      persist();
+      updateHudAndMap(false);
+      showBanner(`${q.info || "Točno: " + q.opts[q.ans]}`, `+${q.km} km`, false);
+      glideDuckTo(mData.km, reachedCity, () => {
+        if (doneGoal) { mData.finished = true; playSound("finish"); launchConfetti(); persist(); renderTask(false); }
+        else queueNextStep();
+      });
+    } else {
+      btn.classList.add("bad");
+      document.querySelectorAll(".opt-choice")[q.ans].classList.add("ok");
+      mData.lives -= 1;
+      bumpStreak(mData, false);
+      mData.history.push({ qId: q.id, cat: "KVIZ", answer: q.opts[idx], rankLabel: "Netočno", gained: 0, info: q.info || "" });
+      playSound("bad");
+      persist();
+      updateHudAndMap(false);
+      showBanner(`Netočno • Životi: ${Math.max(0, mData.lives)}`, "0 km", true);
+      queueNextStep();
+    }
+  }
+
+  function startFreshRound() {
+    playSound("click");
+    inputLocked = false; showingRoundReview = false; selectedTier = null;
+    const mData = state.modes[state.mode];
+    mData.qInRound = 0; mData.history = [];
+    if (state.mode === "lives") mData.lives = 3;
+    if (state.mode === "orljava") mData.roundQueue = buildOrljavaRoundQueue();
+    pickQuestionForStep(state.mode);
+    persist();
+    updateHudAndMap(false);
+    renderTask(false);
+  }
+
+  function resetCurrentMode() {
+    clearTimeout(autoAdvanceTimer);
+    cancelAnimationFrame(rafHandle);
+    inputLocked = false; showingRoundReview = false; selectedTier = null;
+    document.getElementById("feedbackBar").style.display = "none";
+    document.getElementById("manualNextBtn").style.display = "none";
+    const keepBest = state.modes[state.mode].bestKm || 0;
+    state.modes[state.mode] = makeModeObj();
+    state.modes[state.mode].bestKm = keepBest;
+    if (state.mode === "orljava") state.modes.orljava.roundQueue = buildOrljavaRoundQueue();
+    pickQuestionForStep(state.mode);
+    animKm = 0;
+    persist();
+    updateHudAndMap(true);
+    renderTask(false);
+  }
+
+  function resetAllModes() {
+    localStorage.removeItem("game2850_unique_v4");
+    state = freshState();
+    animKm = 0;
+    persist();
+    refreshMenuCards();
+    initDailyQuiz();
+  }
+
+  function syncSettingsUI() {
+    const l = state.lang || "hr";
+    const sBtn = document.getElementById("toggleSoundBtn");
+    sBtn.textContent = trStr(state.settings.sound ? "UKLJUČENO" : "ISKLJUČENO", l);
+    sBtn.classList.toggle("on", state.settings.sound);
+    const aBtn = document.getElementById("toggleAutoBtn");
+    aBtn.textContent = trStr(state.settings.autoNext ? "UKLJUČENO" : "ISKLJUČENO", l);
+    aBtn.classList.toggle("on", state.settings.autoNext);
+    const vol = state.settings.volume ?? 75;
+    document.getElementById("sideVolSlider").value = vol;
+    document.getElementById("sideVolLabel").textContent = `${vol}%`;
+    ["slow", "normal", "fast"].forEach(sp => document.getElementById("spd-" + sp).classList.toggle("active", state.settings.speed === sp));
+  }
+
+  function setVolume(val) {
+    state.settings.volume = Number(val);
+    if (state.settings.volume > 0 && !state.settings.sound) state.settings.sound = true;
+    persist();
+    syncSettingsUI();
+  }
+
+  function toggleSetting(k) {
+    playSound("click");
+    state.settings[k] = !state.settings[k];
+    if (k === "autoNext" && state.settings.autoNext && inputLocked && !isRouteCompleted()) queueNextStep();
+    persist();
+    syncSettingsUI();
+  }
+
+  function setSpeed(sp) {
+    state.settings.speed = sp;
+    persist();
+    syncSettingsUI();
+  }
+
+  refreshMenuCards();
+  initDailyQuiz();
+  syncSettingsUI();
+  setInterval(() => {
+    updateNextDailyCountdown();
+    if (state.dailyQuiz.dateKey !== getTodayKey()) initDailyQuiz();
+  }, 1000);
+</script>
+</body>
+</html>

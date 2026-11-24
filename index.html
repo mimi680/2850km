@@ -1,0 +1,2777 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2850 km — Kviz putovanje</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #111827;
+      --panel-2: #192336;
+      --border: #273549;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --gold: #facc15;
+      --sky: #38bdf8;
+      --ok: #22c55e;
+      --bad: #ef4444;
+    }
+    * {
+      box-sizing: border-box;
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+    body {
+      margin: 0;
+      background-color: var(--bg);
+      background-image:
+        radial-gradient(circle at 18% 12%, rgba(56, 189, 248, 0.13), transparent 42%),
+        radial-gradient(circle at 82% 16%, rgba(250, 204, 21, 0.1), transparent 40%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 14px;
+      overflow-x: hidden;
+    }
+    #confettiCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 9999;
+    }
+    .app {
+      max-width: 740px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .brand-title {
+      margin: 0;
+      font-size: 1.45rem;
+      letter-spacing: -0.02em;
+      cursor: pointer;
+      user-select: none;
+    }
+    .brand-title:hover {
+      color: var(--gold);
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      background: rgba(250, 204, 21, 0.12);
+      border: 1px solid rgba(250, 204, 21, 0.45);
+      color: var(--gold);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .streak-pill {
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      color: #7dd3fc;
+      padding: 6px 11px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.84rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .bonus-banner {
+      background: linear-gradient(90deg, rgba(250, 204, 21, 0.18), rgba(56, 189, 248, 0.18));
+      border: 1px solid rgba(250, 204, 21, 0.65);
+      color: #fef08a;
+      border-radius: 12px;
+      padding: 9px 12px;
+      font-size: 0.86rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .bonus-banner.show {
+      display: flex;
+    }
+    .modes-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .mode-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      cursor: pointer;
+      transition: transform 0.16s ease, border-color 0.16s ease;
+    }
+    .mode-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--gold);
+    }
+    .mode-badge {
+      font-size: 0.74rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--sky);
+    }
+    .mode-title {
+      font-size: 1.12rem;
+      font-weight: 800;
+      margin: 4px 0;
+    }
+    .mode-desc {
+      color: var(--muted);
+      font-size: 0.84rem;
+      line-height: 1.4;
+    }
+    .map-wrap {
+      position: relative;
+      height: 245px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 12px;
+      pointer-events: none;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #0b1324;
+    }
+    .map-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 600;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid var(--border);
+      color: var(--sky);
+      padding: 5px 10px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+    .btn {
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .btn:hover:not(:disabled) {
+      background: #23314b;
+    }
+    .btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-gold {
+      background: var(--gold);
+      color: #0f172a;
+      border-color: var(--gold);
+    }
+    .btn-gold:hover:not(:disabled) {
+      background: #fde047;
+    }
+    .btn-sm {
+      padding: 7px 11px;
+      font-size: 0.82rem;
+      border-radius: 8px;
+    }
+    .stats-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .stat-box {
+      font-weight: 800;
+      font-size: 0.95rem;
+    }
+    .stat-km {
+      color: var(--gold);
+    }
+    .cat-label {
+      color: var(--sky);
+      font-size: 0.8rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .question-text {
+      font-size: 1.22rem;
+      font-weight: 800;
+      margin: 6px 0 4px;
+    }
+    .hint-text {
+      color: var(--muted);
+      font-size: 0.83rem;
+      margin-bottom: 12px;
+      min-height: 18px;
+    }
+    .input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .input-row input {
+      flex: 1;
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      color: var(--text);
+      font-size: 1rem;
+      outline: none;
+    }
+    .input-row input:focus {
+      border-color: var(--gold);
+    }
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .typo-banner {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.12);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .typo-banner.show {
+      display: flex;
+    }
+    .tiers-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .tier-box {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 9px 10px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .tier-box.active {
+      border-color: var(--ok);
+      background: rgba(34, 197, 94, 0.16);
+      transform: scale(1.02);
+    }
+    .tier-name {
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .tier-km {
+      font-size: 0.9rem;
+      font-weight: 800;
+      color: var(--gold);
+      margin-top: 2px;
+    }
+    .feedback-bar {
+      margin-top: 12px;
+      padding: 11px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: #0b1220;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 800;
+      gap: 8px;
+    }
+    .feedback-bar.ok {
+      border-color: rgba(34, 197, 94, 0.6);
+      background: rgba(34, 197, 94, 0.14);
+      color: #86efac;
+    }
+    .feedback-bar.bad {
+      border-color: rgba(239, 68, 68, 0.6);
+      background: rgba(239, 68, 68, 0.14);
+      color: #fca5a5;
+    }
+    .feedback-bar.wait {
+      border-color: rgba(56, 189, 248, 0.6);
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+    }
+    .summary-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0 16px;
+    }
+    .summary-item {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .summary-item.bonus-item {
+      border-color: rgba(250, 204, 21, 0.55);
+      background: rgba(250, 204, 21, 0.07);
+    }
+    .summary-cat {
+      font-size: 0.74rem;
+      font-weight: 800;
+      color: var(--sky);
+      text-transform: uppercase;
+    }
+    .summary-ans {
+      font-size: 1rem;
+      font-weight: 800;
+      margin-top: 2px;
+    }
+    .summary-km {
+      color: var(--gold);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .skins-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .skin-card {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .skin-card.equipped {
+      border-color: var(--ok);
+      background: rgba(34, 197, 94, 0.08);
+    }
+    .skin-aura-tag {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--sky);
+      margin-top: 4px;
+      margin-bottom: 8px;
+    }
+    .setting-row {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .league-row {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .league-row.leader {
+      border-color: var(--gold);
+      background: rgba(250, 204, 21, 0.08);
+    }
+    .league-km-main {
+      font-size: 1.05rem;
+      font-weight: 900;
+      color: var(--gold);
+    }
+
+    .welcome-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 7, 15, 0.82);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9800;
+    }
+    .welcome-box {
+      width: 100%;
+      max-width: 420px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .duck-trigger {
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      border-radius: 10px;
+      transition: transform 0.15s ease;
+      position: relative;
+      z-index: 20;
+    }
+    .duck-trigger:hover {
+      transform: scale(1.06);
+    }
+    .pixel-duck {
+      image-rendering: pixelated;
+      display: inline-block;
+    }
+    .aura-none { filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.65)); }
+    .aura-gold { animation: pulseGold 1.8s infinite alternate; }
+    .aura-fire { animation: pulseFire 1.3s infinite alternate; }
+    .aura-ice { animation: pulseIce 1.7s infinite alternate; }
+    .aura-royal { animation: pulseRoyal 1.6s infinite alternate; }
+    .aura-cyber { animation: pulseCyber 1.1s infinite alternate; }
+    .aura-cosmic { animation: pulseCosmic 2.2s infinite alternate; }
+    @keyframes pulseGold {
+      from { filter: drop-shadow(0 0 4px rgba(250, 204, 21, 0.65)); }
+      to { filter: drop-shadow(0 0 11px rgba(250, 204, 21, 1)); }
+    }
+    @keyframes pulseFire {
+      from { filter: drop-shadow(0 0 5px rgba(249, 115, 22, 0.75)); }
+      to { filter: drop-shadow(0 0 13px rgba(239, 68, 68, 1)); }
+    }
+    @keyframes pulseIce {
+      from { filter: drop-shadow(0 0 4px rgba(125, 211, 252, 0.7)); }
+      to { filter: drop-shadow(0 0 12px rgba(56, 189, 248, 1)); }
+    }
+    @keyframes pulseRoyal {
+      from { filter: drop-shadow(0 0 5px rgba(192, 132, 252, 0.7)); }
+      to { filter: drop-shadow(0 0 13px rgba(250, 204, 21, 0.95)); }
+    }
+    @keyframes pulseCyber {
+      from { filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.8)); }
+      to { filter: drop-shadow(0 0 12px rgba(244, 63, 94, 0.95)); }
+    }
+    @keyframes pulseCosmic {
+      from { filter: drop-shadow(0 0 6px rgba(168, 85, 247, 0.85)); }
+      to { filter: drop-shadow(0 0 15px rgba(56, 189, 248, 1)); }
+    }
+
+    .swim-straight-right {
+      animation: duckStraightSwimAndBack 2.2s ease-in-out forwards;
+    }
+    @keyframes duckStraightSwimAndBack {
+      0% { transform: translateX(0) translateY(0) scale(1.08); }
+      20% { transform: translateX(36px) translateY(-2px) scale(1.1); }
+      40% { transform: translateX(74px) translateY(2px) scale(1.1); }
+      55% { transform: translateX(96px) translateY(0) scale(1.08); }
+      78% { transform: translateX(32px) translateY(-1px) scale(1.04); }
+      100% { transform: translateX(0) translateY(0) scale(1); }
+    }
+    .splash-drop {
+      position: fixed;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #7dd3fc;
+      pointer-events: none;
+      z-index: 9499;
+      box-shadow: 0 0 6px rgba(56, 189, 248, 0.9);
+      animation: splashBurst 0.55s ease-out forwards;
+    }
+    @keyframes splashBurst {
+      0% { transform: translate(0, 0) scale(1); opacity: 0.95; }
+      100% { transform: translate(var(--dx), var(--dy)) scale(0.2); opacity: 0; }
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <canvas id="confettiCanvas"></canvas>
+
+  <div id="welcomeModal" class="welcome-overlay hidden">
+    <div class="welcome-box">
+      <div style="font-size: 1.25rem; font-weight: 800;">Kako se zoveš?</div>
+      <div class="subtitle" style="margin-top: 4px; margin-bottom: 12px;">
+        Upiši svoje ime da uđeš u ligu.
+      </div>
+      <div class="input-row">
+        <input type="text" id="playerNameInput" placeholder="Tvoje ime..." maxlength="24" />
+        <button class="btn btn-gold" onclick="confirmPlayerName()">Uđi</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app">
+    <div class="card">
+      <div class="header-row">
+        <div class="brand">
+          <div id="headerDuck" class="duck-trigger" onclick="swimHeaderDuck()"></div>
+          <div>
+            <h1 class="brand-title" onclick="goHome()">2850 km</h1>
+            <div class="subtitle" id="playerGreeting">Igrač: Gost • Klikni za ime</div>
+          </div>
+        </div>
+        <div class="header-actions">
+          <div class="pill">🪙 <span id="coinsTop">0</span></div>
+          <button class="btn btn-sm" onclick="openLeagueScreen()">🏆 Liga</button>
+          <button class="btn btn-sm" onclick="openSkinsScreen()">🎨 Skinovi</button>
+          <button class="btn btn-sm" onclick="openSettingsScreen()">⚙️ Postavke</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="homeScreen" class="card">
+      <div style="font-weight: 800; font-size: 1.08rem;">Odaberi način igre</div>
+      <div class="subtitle">5 rjeđih odgovora zaredom otključava bonus pitanje (ne ubraja se u 10 pitanja, max 2 po rundi).</div>
+
+      <div class="modes-grid">
+        <div class="mode-card" onclick="startGame('danube')">
+          <div class="mode-badge">Dunav • 10 pitanja + max 2 bonusa</div>
+          <div class="mode-title">🌊 Dunav — 2850 km</div>
+          <div class="mode-desc">Od izvora do Crnog mora u 10 pitanja.</div>
+        </div>
+
+        <div class="mode-card" onclick="startGame('orljava')">
+          <div class="mode-badge">Orljava • 10 pitanja + max 2 bonusa</div>
+          <div class="mode-title">🏞️ Orljava — 89 km</div>
+          <div class="mode-desc">Od Psunja preko Požege i Pleternice do Save.</div>
+        </div>
+
+        <div class="mode-card" onclick="startGame('daily')">
+          <div class="mode-badge" id="dailyBadge">Pitanje dana • +140 coina</div>
+          <div class="mode-title">📅 Pitanje dana</div>
+          <div class="mode-desc" id="dailyDesc">Jedno pitanje dnevno za +140 coina. Novo za: <strong id="dailyTimer">--:--:--</strong></div>
+        </div>
+
+        <div class="mode-card" onclick="startGame('marathon')">
+          <div class="mode-badge" id="marathonBadge">Maraton • Rekord: --</div>
+          <div class="mode-title">♾️ Maraton</div>
+          <div class="mode-desc">Stigni do 2850 km u što manje pitanja.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="leagueScreen" class="card hidden">
+      <div class="header-row">
+        <div>
+          <div style="font-size: 1.25rem; font-weight: 800;">🏆 Liga — Ukupni kilometri</div>
+          <div class="subtitle">Svi igrači su na tablici, a glavni adut su ukupni kilometri.</div>
+        </div>
+        <button class="btn" onclick="goHome()">🏠 Početna</button>
+      </div>
+
+      <div class="input-row" style="margin-top: 12px;">
+        <input type="text" id="friendNameInput" placeholder="Dodaj igrača u ligu..." maxlength="24" />
+        <button class="btn btn-gold" onclick="addFriendToLeague()">+ Dodaj</button>
+      </div>
+
+      <div class="summary-list" id="leagueList" style="margin-top: 12px;"></div>
+    </div>
+
+    <div id="skinsScreen" class="card hidden">
+      <div class="header-row">
+        <div>
+          <div style="font-size: 1.25rem; font-weight: 800;">🎨 Skinovi patke</div>
+          <div class="subtitle">Otključaj novu patku i auru za coine.</div>
+        </div>
+        <button class="btn" onclick="goHome()">🏠 Početna</button>
+      </div>
+      <div class="skins-grid" id="skinsGrid"></div>
+    </div>
+
+    <div id="settingsScreen" class="card hidden">
+      <div class="header-row">
+        <div>
+          <div style="font-size: 1.25rem; font-weight: 800;">⚙️ Postavke</div>
+          <div class="subtitle">Zvuk, ime igrača i pitanja.</div>
+        </div>
+        <button class="btn" onclick="goHome()">🏠 Početna</button>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div style="font-weight: 800;">👤 Tvoje ime u ligi</div>
+          <div class="subtitle" id="settingsNameSub">Trenutno: Gost</div>
+        </div>
+        <button class="btn btn-sm" onclick="openNameModal()">Promijeni ime</button>
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div style="font-weight: 800;">🔊 Zvukovi</div>
+          <div class="subtitle">8-bit efekti</div>
+        </div>
+        <button class="btn btn-sm" id="soundToggleBtn" onclick="toggleSound()">UKLJUČENO</button>
+      </div>
+
+      <div class="setting-row">
+        <div style="flex: 1; min-width: 180px;">
+          <div style="font-weight: 800;">🎚️ Glasnoća: <span id="volLabel">100%</span></div>
+        </div>
+        <input type="range" id="volSlider" min="0" max="100" value="100" oninput="setVolume(this.value)" style="width: 180px; accent-color: #facc15;" />
+      </div>
+
+      <div class="setting-row">
+        <div>
+          <div style="font-weight: 800;">🔄 Odigrana pitanja</div>
+          <div class="subtitle">Ponovno otključaj sva pitanja</div>
+        </div>
+        <button class="btn btn-sm" onclick="resetSeenQuestions()">Resetiraj</button>
+      </div>
+    </div>
+
+    <div id="gameScreen" class="card hidden">
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="map-badge" id="mapRouteLabel">DUNAV (2850 km)</div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-box" id="qCounterBox">Pitanje <span id="qNum">1</span> / 10</div>
+        <div class="streak-pill" id="rareStreakPill">🔥 Rijetki niz: 0/5 • Bonus: 0/2</div>
+        <div class="pill">🪙 <span id="coinsGame">0</span></div>
+        <div class="stat-box stat-km"><span id="kmCurrent">0</span>/<span id="kmTarget">2850</span> km</div>
+      </div>
+
+      <div class="bonus-banner" id="bonusBanner">
+        <span>⭐ BONUS PITANJE! Ne ubraja se u 10 pitanja.</span>
+        <span id="bonusRewardLabel">+250 km • +80 coina</span>
+      </div>
+
+      <div class="cat-label" id="qCategory">KATEGORIJA</div>
+      <div class="question-text" id="qPrompt">Upiši odgovor.</div>
+      <div class="hint-text" id="qHint"></div>
+
+      <div class="input-row">
+        <input type="text" id="answerInput" placeholder="Upiši odgovor..." autocomplete="off" />
+        <button class="btn btn-gold" id="submitBtn" onclick="submitAnswer()">Potvrdi</button>
+      </div>
+
+      <div id="typoBanner" class="typo-banner">
+        <div>Mislio si na: <strong id="typoSuggestion"></strong>?</div>
+        <button class="btn btn-gold btn-sm" onclick="acceptTypo()">Da</button>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-sm" id="skipBtn" onclick="skipQuestion()">Preskoči</button>
+        <button class="btn btn-sm" onclick="goHome()">🏠 Početna</button>
+      </div>
+
+      <div class="tiers-grid" id="tiersGrid"></div>
+
+      <div class="feedback-bar" id="feedbackBar">
+        <span id="feedbackLeft">0 km</span>
+        <span id="feedbackRight">+0 coina</span>
+      </div>
+    </div>
+
+    <div id="summaryScreen" class="card hidden">
+      <div class="stats-bar">
+        <div class="stat-box" id="summaryBadge">Kraj</div>
+        <div class="pill">🪙 <span id="coinsSummary">0</span></div>
+        <div class="stat-box stat-km"><span id="kmSummary">0</span>/<span id="kmSummaryTarget">2850</span> km</div>
+      </div>
+
+      <div style="font-size: 1.25rem; font-weight: 800;" id="summaryTitle">Kraj runde</div>
+      <div class="subtitle" id="summarySubtitle">Odlično!</div>
+
+      <div class="summary-list" id="summaryList"></div>
+
+      <div class="action-row">
+        <button class="btn btn-gold" id="replayBtn" onclick="restartCurrentMode()">Igraj opet</button>
+        <button class="btn" onclick="openLeagueScreen()">🏆 Liga</button>
+        <button class="btn" onclick="goHome()">🏠 Početna</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const RARE_TIERS = new Set(['rjede', 'vrlo_rijetko', 'najrjede']);
+    const MAX_BONUSES_PER_ROUND = 2;
+
+    const SKINS = [
+      { id: 'classic', name: 'Klasična patka', price: 0, auraLabel: 'Bez aure', auraClass: 'aura-none', body: '#facc15', head: '#16a34a', beak: '#f97316', hat: null },
+      { id: 'gold', name: 'Zlatna patka', price: 350, auraLabel: '✨ Zlatni sjaj', auraClass: 'aura-gold', body: '#fde047', head: '#eab308', beak: '#ea580c', hat: 'crown' },
+      { id: 'pirate', name: 'Gusarska patka', price: 750, auraLabel: '⚓ Kapetanski rub', auraClass: 'aura-gold', body: '#cbd5e1', head: '#475569', beak: '#f97316', hat: 'pirate' },
+      { id: 'ice', name: 'Ledena patka', price: 1200, auraLabel: '❄️ Mrazna aura', auraClass: 'aura-ice', body: '#bae6fd', head: '#0284c7', beak: '#facc15', hat: 'frost' },
+      { id: 'fire', name: 'Plamena patka', price: 1800, auraLabel: '🔥 Vatreni puls', auraClass: 'aura-fire', body: '#fb923c', head: '#dc2626', beak: '#fde047', hat: 'flame' },
+      { id: 'royal', name: 'Kraljevska patka', price: 2600, auraLabel: '👑 Kraljevska aura', auraClass: 'aura-royal', body: '#d8b4fe', head: '#7e22ce', beak: '#facc15', hat: 'crown' },
+      { id: 'cyber', name: 'Cyber patka', price: 3600, auraLabel: '⚡ Neon cyber aura', auraClass: 'aura-cyber', body: '#22d3ee', head: '#0f172a', beak: '#f43f5e', hat: 'visor' },
+      { id: 'cosmic', name: 'Kozmička patka', price: 4800, auraLabel: '🌌 Galaktički sjaj', auraClass: 'aura-cosmic', body: '#c084fc', head: '#312e81', beak: '#38bdf8', hat: 'halo' }
+    ];
+
+    function getSkinById(id) {
+      return SKINS.find(x => x.id === id) || SKINS[0];
+    }
+
+    function getPixelDuckSVG(skinId, size = 34) {
+      const s = getSkinById(skinId);
+      let extra = '';
+      if (s.hat === 'crown') extra = `<rect x="8" y="0" width="2" height="2" fill="#facc15"/><rect x="11" y="0" width="2" height="2" fill="#facc15"/><rect x="8" y="2" width="5" height="2" fill="#eab308"/>`;
+      else if (s.hat === 'pirate') extra = `<rect x="7" y="1" width="7" height="2" fill="#0f172a"/><rect x="10" y="1" width="1" height="1" fill="#f8fafc"/>`;
+      else if (s.hat === 'frost') extra = `<rect x="8" y="1" width="5" height="2" fill="#7dd3fc"/><rect x="9" y="0" width="3" height="1" fill="#e0f2fe"/>`;
+      else if (s.hat === 'flame') extra = `<rect x="9" y="0" width="2" height="2" fill="#ef4444"/><rect x="11" y="1" width="2" height="2" fill="#facc15"/>`;
+      else if (s.hat === 'visor') extra = `<rect x="10" y="4" width="4" height="2" fill="#f43f5e"/>`;
+      else if (s.hat === 'halo') extra = `<rect x="7" y="0" width="7" height="1" fill="#38bdf8"/>`;
+
+      return `<svg class="pixel-duck ${s.auraClass}" width="${size}" height="${size}" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+        ${extra}
+        <rect x="8" y="3" width="5" height="4" fill="${s.head}"/>
+        <rect x="11" y="4" width="1" height="1" fill="#ffffff"/>
+        <rect x="13" y="5" width="3" height="2" fill="${s.beak}"/>
+        <rect x="9" y="7" width="3" height="2" fill="${s.body}"/>
+        <rect x="3" y="8" width="10" height="5" fill="${s.body}"/>
+        <rect x="2" y="7" width="2" height="3" fill="${s.body}"/>
+        <rect x="5" y="9" width="5" height="3" fill="rgba(0,0,0,0.18)"/>
+        <rect x="2" y="13" width="12" height="2" fill="#38bdf8" opacity="0.85"/>
+      </svg>`;
+    }
+
+    function spawnWaterSplash(x, y) {
+      for (let i = 0; i < 9; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'splash-drop';
+        const angle = (-Math.PI * 0.9) + (Math.random() * Math.PI * 0.75);
+        const dist = 12 + Math.random() * 24;
+        drop.style.left = x + 'px';
+        drop.style.top = y + 'px';
+        drop.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+        drop.style.setProperty('--dy', Math.sin(angle) * dist - 6 + 'px');
+        document.body.appendChild(drop);
+        setTimeout(() => drop.remove(), 600);
+      }
+    }
+
+    function swimHeaderDuck() {
+      playRetroSound('splashQuack');
+      const el = document.getElementById('headerDuck');
+      const rect = el.getBoundingClientRect();
+      spawnWaterSplash(rect.left + rect.width * 0.75, rect.bottom - 3);
+
+      let step = 0;
+      const splashTimer = setInterval(() => {
+        step++;
+        if (step > 5) {
+          clearInterval(splashTimer);
+          return;
+        }
+        const r = el.getBoundingClientRect();
+        spawnWaterSplash(r.left + r.width * 0.65, r.bottom - 2);
+      }, 240);
+
+      el.classList.remove('swim-straight-right');
+      void el.offsetWidth;
+      el.classList.add('swim-straight-right');
+
+      setTimeout(() => {
+        clearInterval(splashTimer);
+        el.classList.remove('swim-straight-right');
+      }, 2250);
+    }
+
+    const confettiCanvas = document.getElementById('confettiCanvas');
+    const confettiCtx = confettiCanvas.getContext('2d');
+    let confettiParticles = [];
+    let confettiAnimId = null;
+
+    function resizeConfetti() {
+      confettiCanvas.width = window.innerWidth;
+      confettiCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeConfetti);
+    resizeConfetti();
+
+    function launchConfetti() {
+      const colors = ['#facc15', '#38bdf8', '#22c55e', '#f43f5e', '#a855f7', '#fb923c'];
+      confettiParticles = Array.from({ length: 140 }, () => ({
+        x: Math.random() * confettiCanvas.width,
+        y: -20 - Math.random() * confettiCanvas.height * 0.6,
+        w: 7 + Math.random() * 7,
+        h: 5 + Math.random() * 6,
+        vy: 2.5 + Math.random() * 4.2,
+        vx: -2 + Math.random() * 4,
+        rot: Math.random() * Math.PI * 2,
+        vRot: -0.12 + Math.random() * 0.24,
+        color: colors[Math.floor(Math.random() * colors.length)]
+      }));
+
+      if (confettiAnimId) cancelAnimationFrame(confettiAnimId);
+      const startTime = performance.now();
+
+      function tick(now) {
+        confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        confettiParticles.forEach(p => {
+          p.y += p.vy;
+          p.x += p.vx;
+          p.rot += p.vRot;
+          confettiCtx.save();
+          confettiCtx.translate(p.x, p.y);
+          confettiCtx.rotate(p.rot);
+          confettiCtx.fillStyle = p.color;
+          confettiCtx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+          confettiCtx.restore();
+        });
+        if (now - startTime < 4200) confettiAnimId = requestAnimationFrame(tick);
+        else {
+          confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+          confettiAnimId = null;
+        }
+      }
+      confettiAnimId = requestAnimationFrame(tick);
+    }
+
+    const ROUTES = {
+      danube: {
+        name: 'Dunav',
+        targetKm: 2850,
+        coords: [
+          [48.0956, 8.1553], [48.3984, 9.9916], [48.5748, 13.4609],
+          [48.2082, 16.3738], [48.1486, 17.1077], [47.4979, 19.0402],
+          [45.3489, 19.0005], [45.2671, 19.8335], [44.8176, 20.4633],
+          [44.6711, 22.5294], [43.8486, 25.9534], [44.3302, 28.0598],
+          [45.1583, 29.6606]
+        ]
+      },
+      orljava: {
+        name: 'Orljava',
+        targetKm: 89,
+        coords: [
+          [45.5450, 17.4650], [45.4850, 17.5200], [45.4480, 17.5850],
+          [45.3600, 17.6300], [45.3310, 17.6750], [45.2880, 17.7980],
+          [45.2100, 17.7650], [45.1450, 17.7300], [45.1110, 17.7320]
+        ]
+      }
+    };
+
+    const TIERS_DANUBE = [
+      { key: 'vrlo_cesto', label: 'Vrlo često', km: 140 },
+      { key: 'cesto', label: 'Često', km: 175 },
+      { key: 'poznato', label: 'Poznato', km: 215 },
+      { key: 'srednje', label: 'Srednje', km: 255 },
+      { key: 'rjede', label: 'Rjeđe', km: 295 },
+      { key: 'vrlo_rijetko', label: 'Vrlo rijetko', km: 330 },
+      { key: 'najrjede', label: 'Najrjeđe', km: 365 }
+    ];
+
+    const TIERS_MARATHON = [
+      { key: 'vrlo_cesto', label: 'Vrlo često', km: 95 },
+      { key: 'cesto', label: 'Često', km: 130 },
+      { key: 'poznato', label: 'Poznato', km: 170 },
+      { key: 'srednje', label: 'Srednje', km: 210 },
+      { key: 'rjede', label: 'Rjeđe', km: 250 },
+      { key: 'vrlo_rijetko', label: 'Vrlo rijetko', km: 290 },
+      { key: 'najrjede', label: 'Najrjeđe', km: 335 }
+    ];
+
+    const TIERS_ORLJAVA = [
+      { key: 'vrlo_cesto', label: 'Vrlo često', km: 4 },
+      { key: 'cesto', label: 'Često', km: 6 },
+      { key: 'poznato', label: 'Poznato', km: 7 },
+      { key: 'srednje', label: 'Srednje', km: 8 },
+      { key: 'rjede', label: 'Rjeđe', km: 9 },
+      { key: 'vrlo_rijetko', label: 'Vrlo rijetko', km: 10 },
+      { key: 'najrjede', label: 'Najrjeđe', km: 12 }
+    ];
+
+    const QUESTIONS_GENERAL = [
+      {
+        id: 'eurovision_hr',
+        category: 'EUROSONG (HRVATSKA)',
+        prompt: 'Pjesma koja je predstavljala Hrvatsku na Eurosongu.',
+        hint: 'Npr. Rim Tim Tagi Dim',
+        wikiKeywords: ['eurosong', 'eurovision', 'hrvatska', 'dora'],
+        answers: [
+          { text: 'Rim Tim Tagi Dim', tier: 'vrlo_cesto', aliases: ['rim tim tagi dim'] },
+          { text: 'Mama ŠČ!', tier: 'vrlo_cesto', aliases: ['mama sc', 'mama šč'] },
+          { text: 'Marija Magdalena', tier: 'cesto' },
+          { text: 'Sveta ljubav', tier: 'poznato' },
+          { text: 'Nostalgija', tier: 'srednje' },
+          { text: 'Neka mi ne svane', tier: 'rjede' },
+          { text: 'Lako je sve', tier: 'rjede' },
+          { text: 'Crazy', tier: 'rjede' },
+          { text: 'Mižerija', tier: 'vrlo_rijetko', aliases: ['mizerija'] },
+          { text: "Don't Ever Cry", tier: 'vrlo_rijetko', aliases: ['dont ever cry'] },
+          { text: 'Lijepa Tena', tier: 'vrlo_rijetko' },
+          { text: 'Lighthouse', tier: 'najrjede' },
+          { text: 'Sasvim sigurna', tier: 'najrjede' },
+          { text: 'Nebo', tier: 'najrjede' },
+          { text: 'Strings of My Heart', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'hr_series_after_2000',
+        category: 'DOMAĆE SERIJE',
+        prompt: 'Hrvatska serija emitirana nakon 2000. godine.',
+        hint: 'Npr. Bitange i princeze',
+        wikiKeywords: ['serija', 'televizijska', 'hrvatska', 'hrt', 'nova tv', 'rtl'],
+        answers: [
+          { text: 'Bitange i princeze', tier: 'vrlo_cesto' },
+          { text: 'Naša mala klinika', tier: 'vrlo_cesto', aliases: ['nasa mala klinika'] },
+          { text: 'Crno-bijeli svijet', tier: 'cesto', aliases: ['crno bijeli svijet'] },
+          { text: 'Odmori se, zaslužio si', tier: 'poznato', aliases: ['odmori se zasluzio si'] },
+          { text: 'Stipe u gostima', tier: 'poznato' },
+          { text: 'Zauvijek susjedi', tier: 'srednje' },
+          { text: 'Novine', tier: 'rjede' },
+          { text: 'Larin izbor', tier: 'rjede' },
+          { text: 'Kud puklo da puklo', tier: 'rjede' },
+          { text: 'Šutnja', tier: 'vrlo_rijetko', aliases: ['sutnja'] },
+          { text: 'Dnevnik velikog Perice', tier: 'vrlo_rijetko', aliases: ['perica'] },
+          { text: 'Počivali u miru', tier: 'najrjede', aliases: ['pocivali u miru'] },
+          { text: 'Metropolitanci', tier: 'najrjede' },
+          { text: 'Dar mar', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'hr_tunnels',
+        category: 'TUNELI U HRVATSKOJ',
+        prompt: 'Cestovni ili željeznički tunel u Hrvatskoj.',
+        hint: 'Npr. Sveti Rok',
+        wikiKeywords: ['tunel', 'autocesta', 'hrvatska', 'cesta'],
+        answers: [
+          { text: 'Sveti Rok', tier: 'vrlo_cesto', aliases: ['tunel sveti rok'] },
+          { text: 'Mala Kapela', tier: 'vrlo_cesto', aliases: ['tunel mala kapela'] },
+          { text: 'Učka', tier: 'cesto', aliases: ['tunel ucka'] },
+          { text: 'Sveti Ilija', tier: 'poznato', aliases: ['tunel sveti ilija'] },
+          { text: 'Plasina', tier: 'srednje', aliases: ['tunel plasina'] },
+          { text: 'Brinje', tier: 'rjede', aliases: ['tunel brinje'] },
+          { text: 'Tuhobić', tier: 'rjede', aliases: ['tunel tuhobic'] },
+          { text: 'Grič', tier: 'vrlo_rijetko', aliases: ['tunel gric'] },
+          { text: 'Pećine', tier: 'vrlo_rijetko', aliases: ['tunel pecine', 'pecine'] },
+          { text: 'Katarina', tier: 'vrlo_rijetko', aliases: ['tunel katarina'] },
+          { text: 'Brezik', tier: 'najrjede', aliases: ['tunel brezik'] },
+          { text: 'Konjsko', tier: 'najrjede', aliases: ['tunel konjsko'] },
+          { text: 'Sleme', tier: 'najrjede', aliases: ['tunel sleme'] }
+        ]
+      },
+      {
+        id: 'zadar_sibenik_islands',
+        category: 'OTOCI (ZADAR I ŠIBENIK)',
+        prompt: 'Otok u zadarskom ili šibenskom arhipelagu.',
+        hint: 'Npr. Ugljan',
+        wikiKeywords: ['otok', 'arhipelag', 'zadar', 'šibenik', 'jadran'],
+        answers: [
+          { text: 'Ugljan', tier: 'vrlo_cesto' },
+          { text: 'Murter', tier: 'vrlo_cesto' },
+          { text: 'Pašman', tier: 'cesto', aliases: ['pasman'] },
+          { text: 'Dugi otok', tier: 'cesto' },
+          { text: 'Vir', tier: 'poznato' },
+          { text: 'Pag', tier: 'poznato' },
+          { text: 'Prvić', tier: 'srednje', aliases: ['prvic'] },
+          { text: 'Zlarin', tier: 'srednje' },
+          { text: 'Silba', tier: 'rjede' },
+          { text: 'Iž', tier: 'rjede', aliases: ['iz'] },
+          { text: 'Krapanj', tier: 'vrlo_rijetko' },
+          { text: 'Kaprije', tier: 'vrlo_rijetko' },
+          { text: 'Ist', tier: 'vrlo_rijetko' },
+          { text: 'Žirje', tier: 'najrjede', aliases: ['zirje'] },
+          { text: 'Molat', tier: 'najrjede' },
+          { text: 'Olib', tier: 'najrjede' },
+          { text: 'Premuda', tier: 'najrjede' },
+          { text: 'Zverinac', tier: 'najrjede' },
+          { text: 'Sestrunj', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'hr_solo_olympic_gold',
+        category: 'OLIMPIJSKO ZLATO (POJEDINAČNO)',
+        prompt: 'Hrvatski osvajač pojedinačnog olimpijskog zlata.',
+        hint: 'Npr. Janica Kostelić',
+        wikiKeywords: ['olimpijske igre', 'zlatnu medalju', 'hrvatski', 'olimpijac'],
+        answers: [
+          { text: 'Janica Kostelić', tier: 'vrlo_cesto', aliases: ['janica', 'kostelic'] },
+          { text: 'Sandra Perković', tier: 'vrlo_cesto', aliases: ['sandra perkovic', 'sandra elkasevic', 'elkasevic'] },
+          { text: 'Sara Kolak', tier: 'cesto' },
+          { text: 'Giovanni Cernogoraz', tier: 'poznato', aliases: ['cernogoraz'] },
+          { text: 'Josip Glasnović', tier: 'srednje', aliases: ['glasnovic'] },
+          { text: 'Matea Jelić', tier: 'rjede', aliases: ['jelic'] },
+          { text: 'Barbara Matić', tier: 'vrlo_rijetko', aliases: ['matic'] },
+          { text: 'Matija Ljubek', tier: 'najrjede', aliases: ['ljubek'] }
+        ]
+      },
+      {
+        id: 'former_1hnl_clubs',
+        category: 'BIVŠI PRVOLIGAŠI HNL-A',
+        prompt: 'Klub koji je igrao u 1. HNL, a nije stalni prvoligaš.',
+        hint: 'Npr. Cibalia',
+        wikiKeywords: ['hnl', 'nogometni klub', 'prva nogometna liga'],
+        answers: [
+          { text: 'Cibalia', tier: 'vrlo_cesto', aliases: ['hnk cibalia'] },
+          { text: 'Inter Zaprešić', tier: 'cesto', aliases: ['inter', 'nk inter zapresic'] },
+          { text: 'NK Zagreb', tier: 'cesto', aliases: ['zagreb'] },
+          { text: 'Zadar', tier: 'poznato', aliases: ['nk zadar'] },
+          { text: 'Hrvatski dragovoljac', tier: 'poznato', aliases: ['dragovoljac'] },
+          { text: 'Marsonia', tier: 'srednje', aliases: ['nk marsonia'] },
+          { text: 'Kamen Ingrad', tier: 'rjede' },
+          { text: 'Rudeš', tier: 'rjede', aliases: ['rudes'] },
+          { text: 'Pomorac', tier: 'vrlo_rijetko', aliases: ['nk pomorac'] },
+          { text: 'Croatia Sesvete', tier: 'vrlo_rijetko' },
+          { text: 'Mladost 127', tier: 'najrjede' },
+          { text: 'TŠK Topolovac', tier: 'najrjede', aliases: ['tsk topolovac'] },
+          { text: 'Segesta', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'equator_countries',
+        category: 'DRŽAVE NA EKVATORU',
+        prompt: 'Država kroz koju prolazi ekvator.',
+        hint: 'Npr. Brazil',
+        wikiKeywords: ['ekvator', 'equator', 'država'],
+        answers: [
+          { text: 'Brazil', tier: 'vrlo_cesto' },
+          { text: 'Ekvador', tier: 'cesto', aliases: ['ecuador'] },
+          { text: 'Kolumbija', tier: 'poznato', aliases: ['colombia'] },
+          { text: 'Kenija', tier: 'poznato', aliases: ['kenya'] },
+          { text: 'Indonezija', tier: 'srednje', aliases: ['indonesia'] },
+          { text: 'Uganda', tier: 'rjede' },
+          { text: 'Somalija', tier: 'rjede', aliases: ['somalia'] },
+          { text: 'Gabon', tier: 'vrlo_rijetko' },
+          { text: 'Kongo', tier: 'vrlo_rijetko', aliases: ['republika kongo'] },
+          { text: 'DR Kongo', tier: 'najrjede', aliases: ['demokratska republika kongo'] },
+          { text: 'Maldivi', tier: 'najrjede', aliases: ['maldives'] },
+          { text: 'Kiribati', tier: 'najrjede' },
+          { text: 'Sao Tome i Principe', tier: 'najrjede', aliases: ['sao tome'] }
+        ]
+      },
+      {
+        id: 'non_eu_europe',
+        category: 'EUROPA IZVAN EU',
+        prompt: 'Europska država izvan EU.',
+        hint: 'Npr. Norveška',
+        wikiKeywords: ['država', 'europa', 'europske unije'],
+        answers: [
+          { text: 'Norveška', tier: 'vrlo_cesto', aliases: ['norveska', 'norway'] },
+          { text: 'Švicarska', tier: 'vrlo_cesto', aliases: ['svicarska', 'switzerland'] },
+          { text: 'Ujedinjeno Kraljevstvo', tier: 'cesto', aliases: ['velika britanija', 'uk'] },
+          { text: 'Island', tier: 'cesto', aliases: ['iceland'] },
+          { text: 'Srbija', tier: 'poznato' },
+          { text: 'Bosna i Hercegovina', tier: 'poznato', aliases: ['bih', 'bosna'] },
+          { text: 'Ukrajina', tier: 'srednje' },
+          { text: 'Crna Gora', tier: 'srednje' },
+          { text: 'Albanija', tier: 'rjede' },
+          { text: 'Sjeverna Makedonija', tier: 'rjede', aliases: ['makedonija'] },
+          { text: 'Moldavija', tier: 'vrlo_rijetko' },
+          { text: 'Bjelorusija', tier: 'vrlo_rijetko' },
+          { text: 'Monako', tier: 'najrjede', aliases: ['monaco'] },
+          { text: 'Andora', tier: 'najrjede', aliases: ['andorra'] },
+          { text: 'San Marino', tier: 'najrjede' },
+          { text: 'Lihtenštajn', tier: 'najrjede', aliases: ['lihtenstajn'] },
+          { text: 'Vatikan', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'us_border_states',
+        category: 'SAD UZ MEKSIKO ILI KANADU',
+        prompt: 'Američka savezna država uz Meksiko ili Kanadu.',
+        hint: 'Npr. Kalifornija',
+        wikiKeywords: ['savezna država', 'granici', 'meksikom', 'kanadom', 'sad'],
+        answers: [
+          { text: 'Kalifornija', tier: 'vrlo_cesto', aliases: ['california'] },
+          { text: 'Teksas', tier: 'vrlo_cesto', aliases: ['texas'] },
+          { text: 'Aljaska', tier: 'cesto', aliases: ['alaska'] },
+          { text: 'Arizona', tier: 'poznato' },
+          { text: 'Novi Meksiko', tier: 'poznato', aliases: ['new mexico'] },
+          { text: 'Washington', tier: 'srednje' },
+          { text: 'Michigan', tier: 'srednje', aliases: ['micigen'] },
+          { text: 'New York', tier: 'srednje', aliases: ['njujork'] },
+          { text: 'Montana', tier: 'rjede' },
+          { text: 'Idaho', tier: 'rjede' },
+          { text: 'Minnesota', tier: 'vrlo_rijetko' },
+          { text: 'Vermont', tier: 'vrlo_rijetko' },
+          { text: 'Sjeverna Dakota', tier: 'najrjede', aliases: ['north dakota'] },
+          { text: 'Maine', tier: 'najrjede' },
+          { text: 'New Hampshire', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'nolan_tarantino_films',
+        category: 'FILMOVI: NOLAN ILI TARANTINO',
+        prompt: 'Film Christophera Nolana ili Quentina Tarantina.',
+        hint: 'Npr. Inception',
+        wikiKeywords: ['film', 'nolan', 'tarantino'],
+        answers: [
+          { text: 'Inception', tier: 'vrlo_cesto', aliases: ['poceci', 'počeci'] },
+          { text: 'Pulp Fiction', tier: 'vrlo_cesto', aliases: ['pakleni sund'] },
+          { text: 'Interstellar', tier: 'cesto', aliases: ['meduzvjezdani'] },
+          { text: 'Oppenheimer', tier: 'cesto' },
+          { text: 'Django Unchained', tier: 'poznato', aliases: ['odbjegli django'] },
+          { text: 'Kill Bill', tier: 'poznato' },
+          { text: 'Dunkirk', tier: 'srednje' },
+          { text: 'Inglourious Basterds', tier: 'srednje', aliases: ['nemilosrdni gadovi'] },
+          { text: 'Memento', tier: 'rjede' },
+          { text: 'The Prestige', tier: 'rjede', aliases: ['prestiž', 'prestiz'] },
+          { text: 'Once Upon a Time in Hollywood', tier: 'rjede', aliases: ['bilo jednom u hollywoodu'] },
+          { text: 'Tenet', tier: 'vrlo_rijetko' },
+          { text: 'Jackie Brown', tier: 'vrlo_rijetko' },
+          { text: 'Reservoir Dogs', tier: 'najrjede', aliases: ['psi iz rezervoara'] },
+          { text: 'The Hateful Eight', tier: 'najrjede', aliases: ['mrska osmorka'] },
+          { text: 'Following', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'james_bond_actors',
+        category: 'GLUMCI JAMESA BONDA',
+        prompt: 'Glumac koji je tumačio Jamesa Bonda.',
+        hint: 'Npr. Sean Connery',
+        wikiKeywords: ['james bond', 'glumac', '007'],
+        answers: [
+          { text: 'Sean Connery', tier: 'vrlo_cesto', aliases: ['connery'] },
+          { text: 'Daniel Craig', tier: 'vrlo_cesto', aliases: ['craig'] },
+          { text: 'Pierce Brosnan', tier: 'cesto', aliases: ['brosnan'] },
+          { text: 'Roger Moore', tier: 'poznato', aliases: ['moore'] },
+          { text: 'Timothy Dalton', tier: 'rjede', aliases: ['dalton'] },
+          { text: 'George Lazenby', tier: 'vrlo_rijetko', aliases: ['lazenby'] },
+          { text: 'Barry Nelson', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'beatles_queen_members',
+        category: 'BEATLESI ILI QUEEN',
+        prompt: 'Član grupe The Beatles ili Queen.',
+        hint: 'Npr. John Lennon',
+        wikiKeywords: ['beatles', 'queen', 'glazbenik', 'bubnjar', 'gitarist'],
+        answers: [
+          { text: 'Freddie Mercury', tier: 'vrlo_cesto', aliases: ['mercury'] },
+          { text: 'John Lennon', tier: 'vrlo_cesto', aliases: ['lennon'] },
+          { text: 'Paul McCartney', tier: 'cesto', aliases: ['mccartney'] },
+          { text: 'George Harrison', tier: 'poznato', aliases: ['harrison'] },
+          { text: 'Ringo Starr', tier: 'poznato', aliases: ['ringo'] },
+          { text: 'Brian May', tier: 'srednje' },
+          { text: 'Roger Taylor', tier: 'rjede' },
+          { text: 'John Deacon', tier: 'vrlo_rijetko', aliases: ['deacon'] },
+          { text: 'Pete Best', tier: 'najrjede' },
+          { text: 'Stuart Sutcliffe', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'nirvana_metallica_coldplay_albums',
+        category: 'ALBUMI: NIRVANA, METALLICA, COLDPLAY',
+        prompt: 'Studijski album grupe Nirvana, Metallica ili Coldplay.',
+        hint: 'Npr. Nevermind',
+        wikiKeywords: ['album', 'nirvana', 'metallica', 'coldplay'],
+        answers: [
+          { text: 'Nevermind', tier: 'vrlo_cesto' },
+          { text: 'Master of Puppets', tier: 'cesto' },
+          { text: 'Viva la Vida', tier: 'poznato', aliases: ['viva la vida or death and all his friends'] },
+          { text: 'In Utero', tier: 'srednje' },
+          { text: 'Parachutes', tier: 'srednje' },
+          { text: 'Ride the Lightning', tier: 'rjede' },
+          { text: 'Black Album', tier: 'rjede', aliases: ['metallica'] },
+          { text: 'A Rush of Blood to the Head', tier: 'vrlo_rijetko' },
+          { text: 'X&Y', tier: 'vrlo_rijetko' },
+          { text: 'Bleach', tier: 'najrjede' },
+          { text: '...And Justice for All', tier: 'najrjede', aliases: ['and justice for all'] },
+          { text: "Kill 'Em All", tier: 'najrjede', aliases: ['kill em all'] },
+          { text: 'Ghost Stories', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'planets_with_moons',
+        category: 'PLANETI S MJESECIMA',
+        prompt: 'Planet Sunčevog sustava koji ima prirodne satelite.',
+        hint: 'Npr. Saturn',
+        wikiKeywords: ['planet', 'satelit', 'mjesec', 'sunčev sustav'],
+        answers: [
+          { text: 'Zemlja', tier: 'vrlo_cesto' },
+          { text: 'Saturn', tier: 'cesto' },
+          { text: 'Jupiter', tier: 'cesto' },
+          { text: 'Mars', tier: 'poznato' },
+          { text: 'Uran', tier: 'rjede' },
+          { text: 'Neptun', tier: 'vrlo_rijetko' }
+        ]
+      },
+      {
+        id: 'noble_gases',
+        category: 'PLEMENITI PLINOVI',
+        prompt: 'Plemeniti plin iz periodnog sustava.',
+        hint: 'Npr. Helij',
+        wikiKeywords: ['plemeniti plin', 'kemijski element', 'noble gas'],
+        answers: [
+          { text: 'Helij', tier: 'vrlo_cesto', aliases: ['helium'] },
+          { text: 'Neon', tier: 'cesto' },
+          { text: 'Argon', tier: 'poznato' },
+          { text: 'Ksenon', tier: 'rjede' },
+          { text: 'Kripton', tier: 'vrlo_rijetko' },
+          { text: 'Radon', tier: 'najrjede' },
+          { text: 'Oganeson', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'roman_emperors_dynasties',
+        category: 'RIMSKI CAREVI',
+        prompt: 'Rimski car.',
+        hint: 'Npr. August',
+        wikiKeywords: ['rimski car', 'car', 'august', 'neron', 'trajan', 'hadrijan'],
+        answers: [
+          { text: 'August', tier: 'vrlo_cesto', aliases: ['oktavijan august'] },
+          { text: 'Neron', tier: 'cesto', aliases: ['nero'] },
+          { text: 'Kaligula', tier: 'cesto', aliases: ['caligula'] },
+          { text: 'Marko Aurelije', tier: 'poznato', aliases: ['marcus aurelius'] },
+          { text: 'Klaudije', tier: 'srednje', aliases: ['claudius'] },
+          { text: 'Tiberije', tier: 'rjede', aliases: ['tiberius'] },
+          { text: 'Hadrijan', tier: 'rjede', aliases: ['hadrian'] },
+          { text: 'Trajan', tier: 'vrlo_rijetko', aliases: ['trajan'] },
+          { text: 'Antonin Pio', tier: 'najrjede' },
+          { text: 'Nerva', tier: 'najrjede' },
+          { text: 'Lucije Ver', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'italy_japan_cars',
+        category: 'AUTI: ITALIJA ILI JAPAN',
+        prompt: 'Marka automobila iz Italije ili Japana.',
+        hint: 'Npr. Ferrari',
+        wikiKeywords: ['automobil', 'proizvođač', 'italija', 'japan'],
+        answers: [
+          { text: 'Ferrari', tier: 'vrlo_cesto' },
+          { text: 'Toyota', tier: 'vrlo_cesto' },
+          { text: 'Fiat', tier: 'cesto' },
+          { text: 'Lamborghini', tier: 'cesto' },
+          { text: 'Honda', tier: 'cesto' },
+          { text: 'Nissan', tier: 'poznato' },
+          { text: 'Mazda', tier: 'poznato' },
+          { text: 'Alfa Romeo', tier: 'srednje', aliases: ['alfa'] },
+          { text: 'Subaru', tier: 'srednje' },
+          { text: 'Mitsubishi', tier: 'rjede' },
+          { text: 'Maserati', tier: 'rjede' },
+          { text: 'Suzuki', tier: 'vrlo_rijetko' },
+          { text: 'Lancia', tier: 'vrlo_rijetko' },
+          { text: 'Lexus', tier: 'najrjede' },
+          { text: 'Pagani', tier: 'najrjede' },
+          { text: 'Acura', tier: 'najrjede' },
+          { text: 'Infiniti', tier: 'najrjede' }
+        ]
+      }
+    ];
+
+    const QUESTIONS_ORLJAVA = [
+      {
+        id: 'slav_d2_podravska',
+        category: 'CESTA D2 (PODRAVSKA MAGISTRALA)',
+        prompt: 'Mjesto na cesti D2 u Slavoniji i Baranji.',
+        hint: 'Npr. Virovitica',
+        wikiKeywords: ['d2', 'podravska magistrala', 'državna cesta', 'osijek', 'virovitica', 'slavonija'],
+        answers: [
+          { text: 'Osijek', tier: 'vrlo_cesto' },
+          { text: 'Virovitica', tier: 'vrlo_cesto' },
+          { text: 'Slatina', tier: 'cesto' },
+          { text: 'Našice', tier: 'cesto', aliases: ['nasice'] },
+          { text: 'Vukovar', tier: 'cesto' },
+          { text: 'Ilok', tier: 'poznato' },
+          { text: 'Pitomača', tier: 'srednje', aliases: ['pitomaca'] },
+          { text: 'Suhopolje', tier: 'rjede' },
+          { text: 'Orahovica', tier: 'rjede' },
+          { text: 'Nova Bukovica', tier: 'vrlo_rijetko' },
+          { text: 'Feričanci', tier: 'vrlo_rijetko', aliases: ['fericanci'] },
+          { text: 'Koška', tier: 'vrlo_rijetko', aliases: ['koska'] },
+          { text: 'Klisa', tier: 'najrjede' },
+          { text: 'Sotin', tier: 'najrjede' },
+          { text: 'Opatovac', tier: 'najrjede' },
+          { text: 'Šarengrad', tier: 'najrjede', aliases: ['sarengrad'] }
+        ]
+      },
+      {
+        id: 'slav_rail_corridor',
+        category: 'ŽELJEZNICA KROZ SLAVONIJU',
+        prompt: 'Postaja ili čvorište na pruzi Zagreb – Beograd.',
+        hint: 'Npr. Vinkovci',
+        wikiKeywords: ['željeznički kolodvor', 'postaja', 'pruga', 'vinkovci', 'slavonski brod', 'novska'],
+        answers: [
+          { text: 'Slavonski Brod', tier: 'vrlo_cesto' },
+          { text: 'Vinkovci', tier: 'vrlo_cesto' },
+          { text: 'Nova Gradiška', tier: 'cesto', aliases: ['nova gradiska'] },
+          { text: 'Novska', tier: 'poznato' },
+          { text: 'Okučani', tier: 'poznato', aliases: ['okucani'] },
+          { text: 'Strizivojna-Vrpolje', tier: 'srednje', aliases: ['strizivojna vrpolje', 'vrpolje'] },
+          { text: 'Tovarnik', tier: 'rjede' },
+          { text: 'Ivankovo', tier: 'rjede' },
+          { text: 'Andrijevci', tier: 'vrlo_rijetko' },
+          { text: 'Sibinj', tier: 'vrlo_rijetko' },
+          { text: 'Oriovac', tier: 'najrjede' },
+          { text: 'Staro Petrovo Selo', tier: 'najrjede' },
+          { text: 'Nova Kapela – Batrina', tier: 'najrjede', aliases: ['nova kapela batrina', 'batrina'] },
+          { text: 'Garčin', tier: 'najrjede', aliases: ['garcin'] }
+        ]
+      },
+      {
+        id: 'slav_bridges',
+        category: 'MOSTOVI (SAVA, DRAVA, DUNAV)',
+        prompt: 'Most preko Save, Drave ili Dunava u Slavoniji/Baranji.',
+        hint: 'Npr. Most kod Batine',
+        wikiKeywords: ['most', 'drava', 'sava', 'dunav', 'batina', 'svilaj', 'slavonija'],
+        answers: [
+          { text: 'Most u Slavonskom Brodu', tier: 'vrlo_cesto', aliases: ['most slavonski brod'] },
+          { text: 'Most kod Batine', tier: 'cesto', aliases: ['most batina', 'dunavski most batina'] },
+          { text: 'Most kod Svilaja', tier: 'cesto', aliases: ['most svilaj', 'svilaj'] },
+          { text: 'Most mladosti', tier: 'poznato', aliases: ['pjesacki most osijek', 'most mladosti osijek'] },
+          { text: 'Most 3. gardijske brigade', tier: 'poznato', aliases: ['most 3 gardijske brigade', 'obilaznica osijek'] },
+          { text: 'Most u Županji', tier: 'srednje', aliases: ['most zupanja', 'zupanja'] },
+          { text: 'Most u Staroj Gradiški', tier: 'rjede', aliases: ['most stara gradiska'] },
+          { text: 'Most kod Belišća', tier: 'rjede', aliases: ['most belisce', 'belisce'] },
+          { text: 'Most kod Donjeg Miholjca', tier: 'vrlo_rijetko', aliases: ['most donji miholjac'] },
+          { text: 'Most Erdut – Bogojevo', tier: 'vrlo_rijetko', aliases: ['erdut bogojevo', 'erdut'] },
+          { text: 'Most Ilok – Bačka Palanka', tier: 'najrjede', aliases: ['ilok backa palanka', 'most ilok'] },
+          { text: 'Most u Gunji', tier: 'najrjede', aliases: ['most gunja', 'gunja'] }
+        ]
+      },
+      {
+        id: 'slav_churches_sanctuaries',
+        category: 'CRKVE I SVETIŠTA',
+        prompt: 'Crkva, katedrala ili svetište u Slavoniji i Baranji.',
+        hint: 'Npr. Đakovačka katedrala',
+        wikiKeywords: ['katedrala', 'svetište', 'crkva', 'đakovo', 'osijek', 'požega', 'aljmaš', 'pleternica'],
+        answers: [
+          { text: 'Đakovačka katedrala', tier: 'vrlo_cesto', aliases: ['katedrala sv petra', 'katedrala u dakovu'] },
+          { text: 'Osječka konkatedrala', tier: 'vrlo_cesto', aliases: ['konkatedrala', 'sv petra i pavla osijek'] },
+          { text: 'Svetište Gospe od Utočišta', tier: 'cesto', aliases: ['aljmas', 'aljmaš', 'gospa od utocista'] },
+          { text: 'Požeška katedrala', tier: 'poznato', aliases: ['sv terezije avilske', 'katedrala u pozegi'] },
+          { text: 'Svetište Gospe od Suza', tier: 'poznato', aliases: ['pleternica', 'gospa od suza'] },
+          { text: 'Svetište Gospe Ilačke', tier: 'srednje', aliases: ['ilaca', 'ilača', 'gospa ilacka'] },
+          { text: 'Crkva sv. Euzebija i Poliona', tier: 'rjede', aliases: ['vinkovci crkva', 'sv euzebija i poliona'] },
+          { text: 'Crkva sv. Filipa i Jakova', tier: 'vrlo_rijetko', aliases: ['vukovar crkva', 'sv filipa i jakova'] },
+          { text: 'Svetište Gospe Dragotinske', tier: 'najrjede', aliases: ['dragotin', 'gospa dragotinska'] }
+        ]
+      },
+      {
+        id: 'slav_museums',
+        category: 'MUZEJI SLAVONIJE',
+        prompt: 'Muzej u Slavoniji.',
+        hint: 'Npr. Muzej vučedolske kulture',
+        wikiKeywords: ['muzej', 'vukovar', 'osijek', 'požega', 'pleternica', 'slavonija'],
+        answers: [
+          { text: 'Muzej vučedolske kulture', tier: 'vrlo_cesto', aliases: ['vucedolski muzej', 'muzej vucedolske kulture'] },
+          { text: 'Muzej Slavonije', tier: 'cesto', aliases: ['muzej slavonije osijek'] },
+          { text: 'Gradski muzej Vukovar', tier: 'cesto', aliases: ['dvorac eltz', 'eltz'] },
+          { text: 'Muzej bećarca', tier: 'poznato', aliases: ['muzej becarca', 'becarac muzej'] },
+          { text: 'Gradski muzej Požega', tier: 'srednje', aliases: ['muzej pozega', 'muzej požega'] },
+          { text: 'Muzej Brodskog Posavlja', tier: 'srednje', aliases: ['muzej brodskog posavlja'] },
+          { text: 'Muzej likovnih umjetnosti', tier: 'rjede', aliases: ['mlu osijek'] },
+          { text: 'Gradski muzej Vinkovci', tier: 'vrlo_rijetko', aliases: ['muzej vinkovci'] },
+          { text: 'Muzej Đakovštine', tier: 'najrjede', aliases: ['muzej dakovstine'] }
+        ]
+      },
+      {
+        id: 'slav_fortresses',
+        category: 'TVRĐAVE I UTVRDE',
+        prompt: 'Tvrđava ili utvrda u Slavoniji.',
+        hint: 'Npr. Tvrđa',
+        wikiKeywords: ['tvrđa', 'tvrđava', 'utvrda', 'osijek', 'slavonski brod', 'ružica grad'],
+        answers: [
+          { text: 'Tvrđa', tier: 'vrlo_cesto', aliases: ['tvrda', 'osjecka tvrda', 'osječka tvrđa'] },
+          { text: 'Tvrđava Brod', tier: 'cesto', aliases: ['tvrdava brod', 'brodska tvrdava'] },
+          { text: 'Ružica grad', tier: 'cesto', aliases: ['ruzica grad', 'orahovica grad'] },
+          { text: 'Iločke zidine', tier: 'poznato', aliases: ['ilocke zidine', 'zidine ilok'] },
+          { text: 'Stara Gradiška', tier: 'srednje', aliases: ['tvrdava stara gradiska'] },
+          { text: 'Erdutska kula', tier: 'rjede', aliases: ['kula erdut', 'erdut kula'] },
+          { text: 'Velički stari grad', tier: 'vrlo_rijetko', aliases: ['velicki stari grad', 'stari grad velika'] },
+          { text: 'Kaptolska utvrda', tier: 'najrjede', aliases: ['utvrda kaptol'] }
+        ]
+      },
+      {
+        id: 'slav_crafts',
+        category: 'TRADICIJSKI ZANATI',
+        prompt: 'Stari zanat u Slavoniji.',
+        hint: 'Npr. Kovač',
+        wikiKeywords: ['zanat', 'obrtnik', 'kovač', 'bačvar', 'licitar', 'lončar', 'obrt'],
+        answers: [
+          { text: 'Kovač', tier: 'vrlo_cesto', aliases: ['kovac'] },
+          { text: 'Bačvar', tier: 'cesto', aliases: ['bacvar'] },
+          { text: 'Lončar', tier: 'cesto', aliases: ['loncar'] },
+          { text: 'Licitar', tier: 'poznato', aliases: ['medicar', 'medičar'] },
+          { text: 'Opančar', tier: 'srednje', aliases: ['opancar'] },
+          { text: 'Kolar', tier: 'rjede' },
+          { text: 'Šeširdžija', tier: 'rjede', aliases: ['sesirdzija', 'klobučar'] },
+          { text: 'Užar', tier: 'vrlo_rijetko', aliases: ['uzar'] },
+          { text: 'Tkalka', tier: 'vrlo_rijetko', aliases: ['tkalac'] },
+          { text: 'Remenar', tier: 'najrjede' },
+          { text: 'Korpar', tier: 'najrjede', aliases: ['pletar'] },
+          { text: 'Brico', tier: 'najrjede', aliases: ['brijač'] }
+        ]
+      },
+      {
+        id: 'slav_customs',
+        category: 'SLAVONSKI OBIČAJI',
+        prompt: 'Tradicionalni običaj u Slavoniji.',
+        hint: 'Npr. Kirvaj',
+        wikiKeywords: ['običaj', 'pokladno', 'bušari', 'kraljice', 'ljelje', 'kirvaj', 'slavonija'],
+        answers: [
+          { text: 'Pokladno jahanje', tier: 'vrlo_cesto' },
+          { text: 'Kirvaj', tier: 'vrlo_cesto' },
+          { text: 'Bušari', tier: 'cesto', aliases: ['busari', 'busa'] },
+          { text: 'Kraljice', tier: 'poznato', aliases: ['ljelje', 'ljelje iz gorjana'] },
+          { text: 'Šokačko sijelo', tier: 'poznato', aliases: ['sokacko sijelo'] },
+          { text: 'Pudarina', tier: 'srednje' },
+          { text: 'Poljevači', tier: 'rjede', aliases: ['poljevaci', 'polijevanje'] },
+          { text: 'Čauši', tier: 'vrlo_rijetko', aliases: ['causi', 'zvončari'] }
+        ]
+      },
+      {
+        id: 'slav_yard_terms',
+        category: 'SLAVONSKO DVORIŠTE',
+        prompt: 'Dio tradicionalnog slavonskog dvorišta ili kuće.',
+        hint: 'Npr. Čardak',
+        wikiKeywords: ['čardak', 'ambar', 'đeram', 'trijem', 'čerpić', 'gator', 'dvorište', 'kuća', 'zgrada', 'slavonija'],
+        answers: [
+          { text: 'Čardak', tier: 'vrlo_cesto', aliases: ['cardak'] },
+          { text: 'Ambar', tier: 'cesto', aliases: ['zitnica', 'žitnica'] },
+          { text: 'Đeram', tier: 'cesto', aliases: ['deram', 'bunar deram'] },
+          { text: 'Trijem', tier: 'poznato', aliases: ['ganjak'] },
+          { text: 'Krušna peć', tier: 'poznato', aliases: ['krusna pec'] },
+          { text: 'Šupa', tier: 'srednje', aliases: ['supa'] },
+          { text: 'Pušnica', tier: 'srednje', aliases: ['pusnica', 'sušionica'] },
+          { text: 'Štagalj', tier: 'rjede', aliases: ['stagalj'] },
+          { text: 'Čerpić', tier: 'rjede', aliases: ['cerpic', 'cerpic cigla', 'ćerpić'] },
+          { text: 'Gator', tier: 'vrlo_rijetko', aliases: ['podrum gator'] },
+          { text: 'Kočak', tier: 'najrjede', aliases: ['kocak', 'svinjac'] },
+          { text: 'Bunarić', tier: 'najrjede', aliases: ['bunar'] }
+        ]
+      },
+      {
+        id: 'slav_forest_trees',
+        category: 'ŠUME SLAVONIJE',
+        prompt: 'Vrsta drveta u slavonskim šumama.',
+        hint: 'Npr. Hrast lužnjak',
+        wikiKeywords: ['hrast', 'bukva', 'grab', 'jasen', 'šuma', 'drvo'],
+        answers: [
+          { text: 'Hrast lužnjak', tier: 'vrlo_cesto', aliases: ['luznjak', 'hrast'] },
+          { text: 'Bukva', tier: 'vrlo_cesto' },
+          { text: 'Hrast kitnjak', tier: 'cesto', aliases: ['kitnjak'] },
+          { text: 'Obični grab', tier: 'poznato', aliases: ['grab'] },
+          { text: 'Poljski jasen', tier: 'srednje', aliases: ['jasen'] },
+          { text: 'Bijela vrba', tier: 'rjede', aliases: ['vrba'] },
+          { text: 'Topola', tier: 'rjede' },
+          { text: 'Crna joha', tier: 'vrlo_rijetko', aliases: ['joha'] },
+          { text: 'Lipa', tier: 'najrjede' },
+          { text: 'Kesten', tier: 'najrjede', aliases: ['pitomi kesten'] }
+        ]
+      },
+      {
+        id: 'slav_crops',
+        category: 'POLJOPRIVREDA SLAVONIJE',
+        prompt: 'Kultura koja se uzgaja na slavonskim poljima.',
+        hint: 'Npr. Kukuruz',
+        wikiKeywords: ['pšenica', 'kukuruz', 'suncokret', 'soja', 'šećerna repa', 'žitarice', 'usjev'],
+        answers: [
+          { text: 'Kukuruz', tier: 'vrlo_cesto' },
+          { text: 'Pšenica', tier: 'vrlo_cesto', aliases: ['psenica'] },
+          { text: 'Suncokret', tier: 'cesto' },
+          { text: 'Soja', tier: 'poznato' },
+          { text: 'Šećerna repa', tier: 'srednje', aliases: ['secerna repa', 'repa'] },
+          { text: 'Uljana repica', tier: 'srednje', aliases: ['repica'] },
+          { text: 'Ječam', tier: 'rjede', aliases: ['jecam'] },
+          { text: 'Duhan', tier: 'rjede' },
+          { text: 'Zob', tier: 'vrlo_rijetko' },
+          { text: 'Kamilica', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'slav_excursions_huts',
+        category: 'IZLETIŠTA I DOMOVI',
+        prompt: 'Izletište ili dom na slavonskim gorjima.',
+        hint: 'Npr. Jankovac',
+        wikiKeywords: ['jankovac', 'omanovac', 'strmac', 'sovsko jezero', 'papuk', 'psunj', 'dilj', 'izletište'],
+        answers: [
+          { text: 'Jankovac', tier: 'vrlo_cesto' },
+          { text: 'Omanovac', tier: 'cesto', aliases: ['omanovac psunj'] },
+          { text: 'Strmac', tier: 'cesto', aliases: ['strmac psunj'] },
+          { text: 'Sovsko jezero', tier: 'poznato', aliases: ['sovsko jezero dilj'] },
+          { text: 'Duboka', tier: 'srednje', aliases: ['izletiste duboka', 'velika duboka'] },
+          { text: 'Petnja', tier: 'rjede', aliases: ['jezero petnja', 'petnja dilj'] },
+          { text: 'Zvečevo', tier: 'vrlo_rijetko', aliases: ['zvecevo'] },
+          { text: 'Šumarska kuća Trišnjica', tier: 'najrjede', aliases: ['trisnjica', 'trišnjica'] }
+        ]
+      },
+      {
+        id: 'slav_easternmost',
+        category: 'NAJISTOČNIJE NASELJE',
+        prompt: 'Najistočnije naselje u Hrvatskoj.',
+        hint: 'Npr. Ilok',
+        wikiKeywords: ['ilok', 'najistočnije', 'rađevac', 'principovac'],
+        answers: [
+          { text: 'Ilok', tier: 'vrlo_cesto' },
+          { text: 'Principovac', tier: 'rjede' },
+          { text: 'Rađevac', tier: 'najrjede', aliases: ['radevac'] }
+        ]
+      },
+      {
+        id: 'slav_prefix_towns',
+        category: 'NAZIVI SLAVONSKI / STARA / NOVA',
+        prompt: 'Mjesto sa "Slavonski", "Stara/Staro" ili "Nova/Novo".',
+        hint: 'Npr. Slavonski Brod',
+        wikiKeywords: ['slavonski brod', 'nova gradiška', 'stara gradiška', 'staro petrovo selo', 'naselje'],
+        answers: [
+          { text: 'Slavonski Brod', tier: 'vrlo_cesto' },
+          { text: 'Nova Gradiška', tier: 'cesto', aliases: ['nova gradiska'] },
+          { text: 'Stara Gradiška', tier: 'poznato', aliases: ['stara gradiska'] },
+          { text: 'Slavonski Šamac', tier: 'srednje', aliases: ['slavonski samac'] },
+          { text: 'Staro Petrovo Selo', tier: 'srednje' },
+          { text: 'Nova Kapela', tier: 'rjede' },
+          { text: 'Stari Mikanovci', tier: 'vrlo_rijetko' },
+          { text: 'Novi Mikanovci', tier: 'vrlo_rijetko' },
+          { text: 'Stari Jankovci', tier: 'vrlo_rijetko' },
+          { text: 'Novi Jankovci', tier: 'vrlo_rijetko' },
+          { text: 'Slavonski Kobaš', tier: 'najrjede', aliases: ['slavonski kobas'] },
+          { text: 'Novo Topolje', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'slav_breweries',
+        category: 'SLAVONSKE PIVOVARE',
+        prompt: 'Pivovara u Slavoniji.',
+        hint: 'Npr. Osječka pivovara',
+        wikiKeywords: ['pivovara', 'pivo', 'osječka', 'slavonica', 'craft', 'osijek'],
+        answers: [
+          { text: 'Osječka pivovara', tier: 'vrlo_cesto', aliases: ['osjecko', 'pivovara osijek'] },
+          { text: 'Slavonica', tier: 'cesto', aliases: ['pivovara slavonica', 'craft pivovara slavonica'] },
+          { text: 'Funky Brewery', tier: 'poznato', aliases: ['funky'] },
+          { text: 'Valens', tier: 'srednje', aliases: ['pivovara valens', 'valens vinkovci'] },
+          { text: 'Beckers', tier: 'rjede', aliases: ['beckers pivovara', 'beckers osijek'] },
+          { text: 'Stric', tier: 'vrlo_rijetko', aliases: ['pivovara stric'] }
+        ]
+      },
+      {
+        id: 'slav_writers',
+        category: 'KNJIŽEVNICI SLAVONIJE',
+        prompt: 'Književnik ili pjesnik iz Slavonije ili Baranje.',
+        hint: 'Npr. Dobriša Cesarić',
+        wikiKeywords: ['književnik', 'pjesnik', 'slavonija', 'baranja', 'pisac'],
+        answers: [
+          { text: 'Dobriša Cesarić', tier: 'vrlo_cesto', aliases: ['cesaric', 'dobrisa cesaric'] },
+          { text: 'Dragutin Tadijanović', tier: 'vrlo_cesto', aliases: ['tadijanovic', 'dragutin tadijanovic'] },
+          { text: 'Antun Gustav Matoš', tier: 'cesto', aliases: ['matos', 'antun gustav matos'] },
+          { text: 'Josip Kozarac', tier: 'poznato', aliases: ['josip kozarac'] },
+          { text: 'Ivan Kozarac', tier: 'poznato', aliases: ['ivan kozarac'] },
+          { text: 'Matija Antun Relković', tier: 'srednje', aliases: ['relkovic', 'matija antun relkovic'] },
+          { text: 'Grigor Vitez', tier: 'rjede', aliases: ['grigor vitez'] },
+          { text: 'Julije Benešić', tier: 'vrlo_rijetko', aliases: ['benesic', 'julije benesic'] }
+        ]
+      },
+      {
+        id: 'slav_works',
+        category: 'DJELA SLAVONSKIH PISACA',
+        prompt: 'Djelo slavonskog pisca.',
+        hint: 'Npr. Đuka Begović',
+        wikiKeywords: ['roman', 'djelo', 'pripovijetka', 'slavonija', 'kozarac', 'matos', 'relković'],
+        answers: [
+          { text: 'Đuka Begović', tier: 'vrlo_cesto', aliases: ['duka begovic'] },
+          { text: 'Tena', tier: 'cesto' },
+          { text: 'Slavonska šuma', tier: 'cesto', aliases: ['slavonska suma'] },
+          { text: 'Satir', tier: 'poznato', aliases: ['satir iliti divji covik', 'satir iliti divji čovik'] },
+          { text: 'Dugo u noć, u zimsku bijelu noć', tier: 'srednje', aliases: ['dugo u noc'] },
+          { text: 'Voćka poslije kiše', tier: 'rjede', aliases: ['vocka poslije kise'] },
+          { text: 'Kad bi drveće hodalo', tier: 'vrlo_rijetko', aliases: ['kad bi drvece hodalo'] }
+        ]
+      },
+      {
+        id: 'tamburica_instruments',
+        category: 'TAMBURICE',
+        prompt: 'Instrument u tamburaškom sastavu.',
+        hint: 'Npr. Bisernica',
+        wikiKeywords: ['tambura', 'instrument', 'tamburica', 'bisernica', 'bugarija', 'glazbalo'],
+        answers: [
+          { text: 'Bisernica', tier: 'vrlo_cesto', aliases: ['prim'] },
+          { text: 'Brač', tier: 'cesto', aliases: ['brac', 'basprim'] },
+          { text: 'Bugarija', tier: 'poznato', aliases: ['kontra'] },
+          { text: 'Berda', tier: 'poznato', aliases: ['bas'] },
+          { text: 'Samica', tier: 'srednje', aliases: ['dangubica'] },
+          { text: 'Čelo', tier: 'rjede', aliases: ['celo', 'celovic', 'čelović'] }
+        ]
+      },
+      {
+        id: 'slavonia_gastro',
+        category: 'SLAVONSKA HRANA',
+        prompt: 'Tradicionalno slavonsko jelo.',
+        hint: 'Npr. Kulen',
+        wikiKeywords: ['jelo', 'gastronomija', 'kuhinja', 'kobasica', 'slavonija', 'meso'],
+        answers: [
+          { text: 'Kulen', tier: 'vrlo_cesto', aliases: ['slavonski kulen'] },
+          { text: 'Čobanac', tier: 'vrlo_cesto', aliases: ['cobanac'] },
+          { text: 'Fiš paprikaš', tier: 'cesto', aliases: ['fis paprikas', 'fis'] },
+          { text: 'Sarma', tier: 'cesto' },
+          { text: 'Kobasica', tier: 'poznato', aliases: ['slavonska kobasica'] },
+          { text: 'Čvarci', tier: 'poznato', aliases: ['cvarci'] },
+          { text: 'Kulenova seka', tier: 'srednje' },
+          { text: 'Šaran na rašljama', tier: 'rjede', aliases: ['saran na rasljama'] },
+          { text: 'Tačkrle', tier: 'vrlo_rijetko', aliases: ['tackrle'] },
+          { text: 'Poderane gaće', tier: 'vrlo_rijetko', aliases: ['poderane gace'] }
+        ]
+      },
+      {
+        id: 'slavonia_rivers',
+        category: 'RIJEKE SLAVONIJE',
+        prompt: 'Rijeka ili potok u Slavoniji (bez Dunava).',
+        hint: 'Npr. Orljava',
+        wikiKeywords: ['rijeka', 'pritok', 'potok', 'slavonija', 'sava', 'drava'],
+        answers: [
+          { text: 'Sava', tier: 'vrlo_cesto' },
+          { text: 'Drava', tier: 'vrlo_cesto' },
+          { text: 'Orljava', tier: 'cesto' },
+          { text: 'Bosut', tier: 'poznato' },
+          { text: 'Vuka', tier: 'srednje' },
+          { text: 'Londža', tier: 'rjede', aliases: ['londza'] },
+          { text: 'Veličanka', tier: 'vrlo_rijetko', aliases: ['velicanka'] },
+          { text: 'Pakra', tier: 'vrlo_rijetko' },
+          { text: 'Ilova', tier: 'najrjede' },
+          { text: 'Karašica', tier: 'najrjede', aliases: ['karasica'] }
+        ]
+      },
+      {
+        id: 'slavonia_wines',
+        category: 'VINA I VINOGORJA',
+        prompt: 'Sorta vina ili vinogorje u Slavoniji.',
+        hint: 'Npr. Graševina',
+        wikiKeywords: ['vino', 'sorta', 'vinogorje', 'grožđe', 'kutjevo', 'ilok'],
+        answers: [
+          { text: 'Graševina', tier: 'vrlo_cesto', aliases: ['grasevina'] },
+          { text: 'Kutjevo', tier: 'cesto', aliases: ['kutjevacko vinogorje'] },
+          { text: 'Traminac', tier: 'poznato' },
+          { text: 'Frankovka', tier: 'srednje' },
+          { text: 'Chardonnay', tier: 'srednje', aliases: ['sardone'] },
+          { text: 'Pinot sivi', tier: 'rjede', aliases: ['sivi pinot'] },
+          { text: 'Pinot crni', tier: 'rjede', aliases: ['crni pinot'] },
+          { text: 'Iločko vinogorje', tier: 'vrlo_rijetko', aliases: ['ilok'] },
+          { text: 'Erdutsko vinogorje', tier: 'najrjede', aliases: ['erdut'] }
+        ]
+      }
+    ];
+
+    const BONUS_QUESTIONS = [
+      {
+        id: 'bonus_hr_np',
+        category: '⭐ BONUS • NACIONALNI PARKOVI HR',
+        prompt: 'Nacionalni park u Hrvatskoj.',
+        hint: 'Npr. Plitvička jezera',
+        wikiKeywords: ['nacionalni park', 'hrvatska', 'jezera', 'krka', 'kornati', 'mljet'],
+        answers: [
+          { text: 'Plitvička jezera', tier: 'vrlo_cesto', aliases: ['plitvice'] },
+          { text: 'Krka', tier: 'cesto', aliases: ['nacionalni park krka'] },
+          { text: 'Kornati', tier: 'poznato' },
+          { text: 'Mljet', tier: 'srednje' },
+          { text: 'Brijuni', tier: 'rjede' },
+          { text: 'Paklenica', tier: 'vrlo_rijetko' },
+          { text: 'Risnjak', tier: 'najrjede' },
+          { text: 'Sjeverni Velebit', tier: 'najrjede' }
+        ]
+      },
+      {
+        id: 'bonus_slav_peaks',
+        category: '⭐ BONUS • SLAVONSKE GORE',
+        prompt: 'Planina ili gorje u Slavoniji.',
+        hint: 'Npr. Papuk',
+        wikiKeywords: ['papuk', 'psunj', 'krndija', 'dilj', 'požeška gora', 'slavonija'],
+        answers: [
+          { text: 'Papuk', tier: 'vrlo_cesto' },
+          { text: 'Psunj', tier: 'cesto' },
+          { text: 'Krndija', tier: 'poznato' },
+          { text: 'Dilj', tier: 'srednje', aliases: ['dilj gora'] },
+          { text: 'Požeška gora', tier: 'rjede', aliases: ['pozeska gora'] }
+        ]
+      },
+      {
+        id: 'bonus_world_oceans_seas',
+        category: '⭐ BONUS • MORA I OCEANI',
+        prompt: 'Ocean ili more.',
+        hint: 'Npr. Jadransko more',
+        wikiKeywords: ['ocean', 'more', 'pacifik', 'atlantski', 'indijski'],
+        answers: [
+          { text: 'Jadransko more', tier: 'vrlo_cesto', aliases: ['jadran'] },
+          { text: 'Atlantski ocean', tier: 'cesto', aliases: ['atlantik'] },
+          { text: 'Tihi ocean', tier: 'cesto', aliases: ['pacifik'] },
+          { text: 'Sredozemno more', tier: 'poznato', aliases: ['mediteran'] },
+          { text: 'Indijski ocean', tier: 'srednje' },
+          { text: 'Crno more', tier: 'rjede' },
+          { text: 'Sjeverno more', tier: 'vrlo_rijetko' },
+          { text: 'Arktički ocean', tier: 'najrjede', aliases: ['sjeverno ledeno more'] }
+        ]
+      },
+      {
+        id: 'bonus_hr_mountains',
+        category: '⭐ BONUS • PLANINE HRVATSKE',
+        prompt: 'Planina u Hrvatskoj.',
+        hint: 'Npr. Velebit',
+        wikiKeywords: ['planina', 'hrvatska', 'velebit', 'biokovo', 'medvednica', 'dinara'],
+        answers: [
+          { text: 'Velebit', tier: 'vrlo_cesto' },
+          { text: 'Biokovo', tier: 'cesto' },
+          { text: 'Medvednica', tier: 'cesto', aliases: ['sljeme'] },
+          { text: 'Dinara', tier: 'poznato' },
+          { text: 'Učka', tier: 'srednje', aliases: ['ucka'] },
+          { text: 'Mosor', tier: 'rjede' },
+          { text: 'Ivančica', tier: 'vrlo_rijetko', aliases: ['ivancica'] },
+          { text: 'Žumberak', tier: 'najrjede', aliases: ['zumberak'] }
+        ]
+      }
+    ];
+
+    const defaultLeague = [
+      { id: 'me', name: 'Gost', totalKm: 0, runs: 0, isMe: true },
+      { id: 'f1', name: 'Luka', totalKm: 1850, runs: 2, isMe: false },
+      { id: 'f2', name: 'Mia', totalKm: 1240, runs: 1, isMe: false },
+      { id: 'f3', name: 'Toma', totalKm: 620, runs: 1, isMe: false }
+    ];
+
+    const state = {
+      playerName: localStorage.getItem('d2850_player_name') || '',
+      coins: Number(localStorage.getItem('d2850_coins') || 0),
+      unlockedSkins: JSON.parse(localStorage.getItem('d2850_skins') || '["classic"]'),
+      equippedSkin: localStorage.getItem('d2850_equipped') || 'classic',
+      soundOn: localStorage.getItem('d2850_sound') !== '0',
+      volume: Number(localStorage.getItem('d2850_vol') ?? 100),
+      seenGeneral: JSON.parse(localStorage.getItem('d2850_seen_gen') || '[]'),
+      seenOrljava: JSON.parse(localStorage.getItem('d2850_seen_orl') || '[]'),
+      dailyDoneDate: localStorage.getItem('d2850_daily_date') || '',
+      marathonBestQuestions: Number(localStorage.getItem('d2850_marathon_best_q') || 0),
+      marathonBestKm: Number(localStorage.getItem('d2850_marathon_best_km') || 0),
+      leagueMembers: JSON.parse(localStorage.getItem('d2850_league_members') || JSON.stringify(defaultLeague)),
+      mode: 'danube',
+      roundQuestions: [],
+      qIndex: 0,
+      km: 0,
+      history: [],
+      rareStreak: 0,
+      bonusesUsed: 0,
+      isBonusTurn: false,
+      activeBonusQuestion: null,
+      usedBonusIds: [],
+      pendingTypo: null,
+      isCheckingWiki: false,
+      questionAnswered: false,
+      duckMoveAnimId: null,
+      map: null,
+      routeLine: null,
+      progressLine: null,
+      duckMarker: null
+    };
+
+    function saveProgress() {
+      localStorage.setItem('d2850_player_name', state.playerName);
+      localStorage.setItem('d2850_coins', String(state.coins));
+      localStorage.setItem('d2850_skins', JSON.stringify(state.unlockedSkins));
+      localStorage.setItem('d2850_equipped', state.equippedSkin);
+      localStorage.setItem('d2850_sound', state.soundOn ? '1' : '0');
+      localStorage.setItem('d2850_vol', String(state.volume));
+      localStorage.setItem('d2850_seen_gen', JSON.stringify(state.seenGeneral));
+      localStorage.setItem('d2850_seen_orl', JSON.stringify(state.seenOrljava));
+      localStorage.setItem('d2850_daily_date', state.dailyDoneDate);
+      localStorage.setItem('d2850_marathon_best_q', String(state.marathonBestQuestions));
+      localStorage.setItem('d2850_marathon_best_km', String(state.marathonBestKm));
+      localStorage.setItem('d2850_league_members', JSON.stringify(state.leagueMembers));
+      updateCoinsAndDuckUI();
+      updateHomeBadges();
+    }
+
+    function openNameModal() {
+      const modal = document.getElementById('welcomeModal');
+      const input = document.getElementById('playerNameInput');
+      input.value = state.playerName || '';
+      modal.classList.remove('hidden');
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function confirmPlayerName() {
+      const input = document.getElementById('playerNameInput');
+      const name = input.value.trim() || 'Igrač';
+      state.playerName = name;
+      const me = state.leagueMembers.find(m => m.isMe);
+      if (me) me.name = name;
+      document.getElementById('welcomeModal').classList.add('hidden');
+      saveProgress();
+      if (!document.getElementById('leagueScreen').classList.contains('hidden')) {
+        renderLeague();
+      }
+      playRetroSound('ok');
+    }
+
+    function updateCoinsAndDuckUI() {
+      const displayName = state.playerName || 'Gost';
+      document.getElementById('playerGreeting').textContent = `Igrač: ${displayName} • Klikni za ime`;
+      document.getElementById('settingsNameSub').textContent = `Trenutno: ${displayName}`;
+      document.getElementById('coinsTop').textContent = state.coins;
+      document.getElementById('coinsGame').textContent = state.coins;
+      document.getElementById('coinsSummary').textContent = state.coins;
+      document.getElementById('headerDuck').innerHTML = getPixelDuckSVG(state.equippedSkin, 38);
+      if (state.duckMarker) {
+        state.duckMarker.setIcon(L.divIcon({
+          className: '',
+          html: getPixelDuckSVG(state.equippedSkin, 36),
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        }));
+      }
+    }
+
+    document.getElementById('playerGreeting').addEventListener('click', openNameModal);
+
+    function getTodayKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+    }
+
+    function updateHomeBadges() {
+      const doneToday = state.dailyDoneDate === getTodayKey();
+      document.getElementById('dailyBadge').textContent = doneToday
+        ? 'Pitanje dana • RIJEŠENO DANAS ✓'
+        : 'Pitanje dana • +140 coina';
+
+      if (state.marathonBestQuestions > 0) {
+        document.getElementById('marathonBadge').textContent =
+          `Maraton • Rekord: ${state.marathonBestQuestions} pit. / ${state.marathonBestKm} km`;
+      } else if (state.marathonBestKm > 0) {
+        document.getElementById('marathonBadge').textContent =
+          `Maraton • Najbolje: ${state.marathonBestKm} km`;
+      } else {
+        document.getElementById('marathonBadge').textContent =
+          'Maraton • Rekord: --';
+      }
+    }
+
+    setInterval(() => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const diff = Math.max(0, tomorrow - now);
+      const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+      const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+      const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+      const el = document.getElementById('dailyTimer');
+      if (el) el.textContent = `${h}h ${m}m ${s}s`;
+    }, 1000);
+
+    function syncMyLeagueKm(gainedKm) {
+      if (gainedKm <= 0) return;
+      const me = state.leagueMembers.find(m => m.isMe);
+      if (me) me.totalKm += gainedKm;
+    }
+
+    function markLeagueRunCompleted() {
+      const me = state.leagueMembers.find(m => m.isMe);
+      if (me) me.runs += 1;
+    }
+
+    function addFriendToLeague() {
+      const input = document.getElementById('friendNameInput');
+      const name = input.value.trim();
+      if (!name) return;
+      state.leagueMembers.push({
+        id: 'f_' + Date.now(),
+        name,
+        totalKm: 0,
+        runs: 0,
+        isMe: false
+      });
+      input.value = '';
+      saveProgress();
+      renderLeague();
+      playRetroSound('ok');
+    }
+
+    function boostFriendKm(id, deltaKm) {
+      const member = state.leagueMembers.find(m => m.id === id);
+      if (!member) return;
+      member.totalKm += deltaKm;
+      member.runs += 1;
+      saveProgress();
+      renderLeague();
+      playRetroSound('quack');
+    }
+
+    function renderLeague() {
+      const list = document.getElementById('leagueList');
+      list.innerHTML = '';
+      const sorted = [...state.leagueMembers].sort((a, b) => b.totalKm - a.totalKm);
+
+      sorted.forEach((m, idx) => {
+        const div = document.createElement('div');
+        div.className = 'league-row' + (idx === 0 ? ' leader' : '');
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx + 1}`;
+        div.innerHTML = `
+          <div>
+            <div style="font-weight: 800; font-size: 0.98rem;">${medal} ${m.name}</div>
+            <div class="subtitle">Rundi: ${m.runs}</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="league-km-main">${m.totalKm} km</div>
+            ${!m.isMe ? `<button class="btn btn-sm" onclick="boostFriendKm('${m.id}', 150)">+150 km</button>` : ''}
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function playRetroSound(kind) {
+      if (!state.soundOn || state.volume <= 0) return;
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const gainVal = (state.volume / 100) * 0.14;
+
+        const playStep = (freq, startOffset, dur, type = 'square') => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + startOffset);
+          gain.gain.setValueAtTime(gainVal, ctx.currentTime + startOffset);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startOffset + dur);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + startOffset);
+          osc.stop(ctx.currentTime + startOffset + dur);
+        };
+
+        if (kind === 'quack') {
+          playStep(340, 0, 0.08, 'sawtooth');
+          playStep(260, 0.09, 0.11, 'sawtooth');
+        } else if (kind === 'splashQuack') {
+          playStep(360, 0, 0.08, 'sawtooth');
+          playStep(245, 0.09, 0.11, 'sawtooth');
+          playStep(880, 0.18, 0.05, 'triangle');
+          playStep(1120, 0.23, 0.06, 'triangle');
+        } else if (kind === 'ok') {
+          playStep(523.25, 0, 0.08, 'square');
+          playStep(659.25, 0.08, 0.08, 'square');
+          playStep(783.99, 0.16, 0.14, 'square');
+        } else if (kind === 'bad') {
+          playStep(220, 0, 0.12, 'sawtooth');
+          playStep(165, 0.12, 0.18, 'sawtooth');
+        } else if (kind === 'typo') {
+          playStep(440, 0, 0.07, 'triangle');
+          playStep(554.37, 0.07, 0.09, 'triangle');
+        } else if (kind === 'win') {
+          playStep(523.25, 0, 0.1, 'square');
+          playStep(659.25, 0.1, 0.1, 'square');
+          playStep(783.99, 0.2, 0.1, 'square');
+          playStep(1046.5, 0.3, 0.28, 'square');
+        }
+      } catch (e) {}
+    }
+
+    function toggleSound() {
+      state.soundOn = !state.soundOn;
+      document.getElementById('soundToggleBtn').textContent = state.soundOn ? 'UKLJUČENO' : 'ISKLJUČENO';
+      saveProgress();
+      if (state.soundOn) playRetroSound('quack');
+    }
+
+    function setVolume(val) {
+      state.volume = Number(val);
+      document.getElementById('volLabel').textContent = state.volume + '%';
+      saveProgress();
+    }
+
+    function resetSeenQuestions() {
+      state.seenGeneral = [];
+      state.seenOrljava = [];
+      saveProgress();
+      playRetroSound('quack');
+      alert('Pitanja su resetirana.');
+    }
+
+    function showOnlyScreen(id) {
+      ['homeScreen', 'leagueScreen', 'skinsScreen', 'settingsScreen', 'gameScreen', 'summaryScreen'].forEach(s => {
+        document.getElementById(s).classList.toggle('hidden', s !== id);
+      });
+    }
+
+    function openLeagueScreen() {
+      renderLeague();
+      showOnlyScreen('leagueScreen');
+      playRetroSound('quack');
+    }
+
+    function openSkinsScreen() {
+      renderSkins();
+      showOnlyScreen('skinsScreen');
+      playRetroSound('quack');
+    }
+
+    function openSettingsScreen() {
+      document.getElementById('soundToggleBtn').textContent = state.soundOn ? 'UKLJUČENO' : 'ISKLJUČENO';
+      document.getElementById('volSlider').value = state.volume;
+      document.getElementById('volLabel').textContent = state.volume + '%';
+      showOnlyScreen('settingsScreen');
+      playRetroSound('quack');
+    }
+
+    function goHome() {
+      updateHomeBadges();
+      updateCoinsAndDuckUI();
+      showOnlyScreen('homeScreen');
+    }
+
+    function renderSkins() {
+      const grid = document.getElementById('skinsGrid');
+      grid.innerHTML = '';
+      SKINS.forEach(skin => {
+        const unlocked = state.unlockedSkins.includes(skin.id);
+        const equipped = state.equippedSkin === skin.id;
+        const div = document.createElement('div');
+        div.className = 'skin-card' + (equipped ? ' equipped' : '');
+        let btnHtml = '';
+        if (equipped) btnHtml = `<button class="btn btn-sm" disabled>Odabrano</button>`;
+        else if (unlocked) btnHtml = `<button class="btn btn-sm" onclick="equipSkin('${skin.id}')">Odaberi</button>`;
+        else btnHtml = `<button class="btn btn-gold btn-sm" onclick="buySkin('${skin.id}')">🪙 ${skin.price}</button>`;
+
+        div.innerHTML = `
+          <div>${getPixelDuckSVG(skin.id, 46)}</div>
+          <div style="font-weight: 800; font-size: 0.88rem; margin-top: 6px;">${skin.name}</div>
+          <div class="skin-aura-tag">${skin.auraLabel}</div>
+          ${btnHtml}
+        `;
+        grid.appendChild(div);
+      });
+    }
+
+    function buySkin(id) {
+      const skin = getSkinById(id);
+      if (!skin || state.coins < skin.price) {
+        playRetroSound('bad');
+        alert('Nemaš dovoljno coina.');
+        return;
+      }
+      state.coins -= skin.price;
+      state.unlockedSkins.push(id);
+      state.equippedSkin = id;
+      saveProgress();
+      renderSkins();
+      playRetroSound('ok');
+    }
+
+    function equipSkin(id) {
+      state.equippedSkin = id;
+      saveProgress();
+      renderSkins();
+      playRetroSound('quack');
+    }
+
+    function normalizeText(str) {
+      return (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      if (m === 0) return n;
+      if (n === 0) return m;
+      const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+          dp[i][j] = Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost);
+        }
+      }
+      return dp[m][n];
+    }
+
+    function findLocalMatch(question, rawInput) {
+      const norm = normalizeText(rawInput);
+      const compact = norm.replace(/\s+/g, '');
+      if (!norm) return { type: 'empty' };
+
+      for (const ans of question.answers) {
+        const candidates = [ans.text, ...(ans.aliases || [])];
+        for (const c of candidates) {
+          const cn = normalizeText(c);
+          if (cn === norm || cn.replace(/\s+/g, '') === compact) {
+            return { type: 'exact', answer: ans };
+          }
+        }
+      }
+
+      let bestAns = null;
+      let bestDist = Infinity;
+      for (const ans of question.answers) {
+        const candidates = [ans.text, ...(ans.aliases || [])];
+        for (const c of candidates) {
+          const cn = normalizeText(c);
+          const dist = levenshtein(norm, cn);
+          const maxAllowed = cn.length <= 4 ? 1 : (cn.length <= 9 ? 2 : 3);
+          if (dist <= maxAllowed && dist < bestDist) {
+            bestDist = dist;
+            bestAns = ans;
+          }
+        }
+      }
+
+      if (bestAns) return { type: 'typo', answer: bestAns };
+      return { type: 'none' };
+    }
+
+    async function verifyWithWikipedia(question, rawInput) {
+      const keywords = (question.wikiKeywords || []).map(k => normalizeText(k));
+      const inputNorm = normalizeText(rawInput);
+      if (inputNorm.length < 2) return null;
+
+      for (const lang of ['hr', 'en']) {
+        try {
+          const url = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(rawInput)}&format=json&origin=*&srlimit=5`;
+          const res = await fetch(url);
+          if (!res.ok) continue;
+          const data = await res.json();
+          const results = data?.query?.search || [];
+
+          for (const item of results) {
+            const titleNorm = normalizeText(item.title);
+            const snippetNorm = normalizeText(item.snippet.replace(/<[^>]*>/g, ' '));
+            const hasKeyword = keywords.length === 0 || keywords.some(kw => snippetNorm.includes(kw) || titleNorm.includes(kw));
+            const mentionsInput = titleNorm.includes(inputNorm) || inputNorm.includes(titleNorm) || snippetNorm.includes(inputNorm) || levenshtein(titleNorm, inputNorm) <= 3;
+
+            if (hasKeyword && mentionsInput) {
+              const formattedTitle = rawInput.charAt(0).toUpperCase() + rawInput.slice(1);
+              return { text: formattedTitle, tier: 'rjede', fromWiki: true };
+            }
+          }
+        } catch (e) {}
+      }
+      return null;
+    }
+
+    function initMap() {
+      const routeKey = state.mode === 'orljava' ? 'orljava' : 'danube';
+      const route = ROUTES[routeKey];
+
+      if (!state.map) {
+        state.map = L.map('map', {
+          zoomControl: false,
+          attributionControl: false,
+          dragging: false,
+          touchZoom: false,
+          scrollWheelZoom: false,
+          doubleClickZoom: false,
+          boxZoom: false,
+          keyboard: false,
+          tap: false
+        });
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(state.map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}').addTo(state.map);
+      }
+
+      if (state.routeLine) state.map.removeLayer(state.routeLine);
+      if (state.progressLine) state.map.removeLayer(state.progressLine);
+      if (state.duckMarker) state.map.removeLayer(state.duckMarker);
+
+      state.routeLine = L.polyline(route.coords, {
+        color: '#94a3b8',
+        weight: 4,
+        dashArray: '6, 8',
+        opacity: 0.8
+      }).addTo(state.map);
+
+      state.progressLine = L.polyline([route.coords[0]], {
+        color: '#facc15',
+        weight: 5
+      }).addTo(state.map);
+
+      state.duckMarker = L.marker(route.coords[0], {
+        icon: L.divIcon({
+          className: '',
+          html: getPixelDuckSVG(state.equippedSkin, 36),
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        })
+      }).addTo(state.map);
+
+      document.getElementById('mapRouteLabel').textContent = `${route.name.toUpperCase()} (${route.targetKm} km)`;
+
+      setTimeout(() => {
+        state.map.invalidateSize();
+        state.map.setView(route.coords[0], routeKey === 'orljava' ? 11 : 7, { animate: false });
+      }, 60);
+    }
+
+    function getPointAtProgress(coords, ratio) {
+      const clamped = Math.max(0, Math.min(1, ratio));
+      if (clamped === 0) return { point: coords[0], trail: [coords[0]] };
+      if (clamped === 1) return { point: coords[coords.length - 1], trail: [...coords] };
+
+      const segLengths = [];
+      let total = 0;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const d = Math.hypot(coords[i + 1][0] - coords[i][0], coords[i + 1][1] - coords[i][1]);
+        segLengths.push(d);
+        total += d;
+      }
+
+      let target = total * clamped;
+      const trail = [coords[0]];
+      for (let i = 0; i < segLengths.length; i++) {
+        if (target <= segLengths[i]) {
+          const t = segLengths[i] === 0 ? 0 : target / segLengths[i];
+          const pt = [
+            coords[i][0] + (coords[i + 1][0] - coords[i][0]) * t,
+            coords[i][1] + (coords[i + 1][1] - coords[i][1]) * t
+          ];
+          trail.push(pt);
+          return { point: pt, trail };
+        }
+        target -= segLengths[i];
+        trail.push(coords[i + 1]);
+      }
+      return { point: coords[coords.length - 1], trail: [...coords] };
+    }
+
+    function animateDuckSlowlyToKm(prevKm, nextKm) {
+      if (state.duckMoveAnimId) cancelAnimationFrame(state.duckMoveAnimId);
+      const routeKey = state.mode === 'orljava' ? 'orljava' : 'danube';
+      const route = ROUTES[routeKey];
+      const duration = 1550;
+      const startTime = performance.now();
+
+      function step(now) {
+        const rawT = Math.min(1, (now - startTime) / duration);
+        const eased = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+        const interpKm = prevKm + (nextKm - prevKm) * eased;
+        const { point, trail } = getPointAtProgress(route.coords, interpKm / route.targetKm);
+
+        state.progressLine.setLatLngs(trail);
+        state.duckMarker.setLatLng(point);
+        state.map.panTo(point, { animate: false });
+
+        if (rawT < 1) state.duckMoveAnimId = requestAnimationFrame(step);
+        else state.duckMoveAnimId = null;
+      }
+
+      state.duckMoveAnimId = requestAnimationFrame(step);
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function pickNonRepeatingQuestions(mode, count) {
+      const isOrljava = mode === 'orljava';
+      const pool = isOrljava ? QUESTIONS_ORLJAVA : QUESTIONS_GENERAL;
+      let seen = isOrljava ? [...state.seenOrljava] : [...state.seenGeneral];
+      let unseen = pool.filter(q => !seen.includes(q.id));
+      let selected = [];
+
+      if (unseen.length >= count) {
+        selected = shuffleArray(unseen).slice(0, count);
+      } else {
+        selected = shuffleArray(unseen);
+        seen = selected.map(q => q.id);
+        const extra = shuffleArray(pool.filter(q => !seen.includes(q.id))).slice(0, count - selected.length);
+        selected = [...selected, ...extra];
+      }
+
+      const updated = Array.from(new Set([...seen, ...selected.map(q => q.id)]));
+      if (isOrljava) state.seenOrljava = updated;
+      else state.seenGeneral = updated;
+      saveProgress();
+      return selected;
+    }
+
+    function pickBonusQuestion() {
+      let available = BONUS_QUESTIONS.filter(b => !state.usedBonusIds.includes(b.id));
+      if (available.length === 0) {
+        state.usedBonusIds = [];
+        available = [...BONUS_QUESTIONS];
+      }
+      const chosen = shuffleArray(available)[0];
+      state.usedBonusIds.push(chosen.id);
+      return chosen;
+    }
+
+    function getBonusKmReward() {
+      if (state.mode === 'orljava') return 14;
+      if (state.mode === 'marathon') return 220;
+      return 260;
+    }
+
+    function updateStreakUI() {
+      const pill = document.getElementById('rareStreakPill');
+      if (!pill) return;
+      if (state.mode === 'daily') {
+        pill.classList.add('hidden');
+        return;
+      }
+      pill.classList.remove('hidden');
+      pill.textContent = `🔥 Rijetki niz: ${state.rareStreak}/5 • Bonus: ${state.bonusesUsed}/${MAX_BONUSES_PER_ROUND}`;
+    }
+
+    function getTiers() {
+      if (state.mode === 'orljava') return TIERS_ORLJAVA;
+      if (state.mode === 'marathon') return TIERS_MARATHON;
+      return TIERS_DANUBE;
+    }
+
+    function startGame(mode) {
+      if (mode === 'daily' && state.dailyDoneDate === getTodayKey()) {
+        alert('Pitanje dana je već riješeno.');
+        return;
+      }
+
+      state.mode = mode;
+      state.qIndex = 0;
+      state.km = 0;
+      state.history = [];
+      state.rareStreak = 0;
+      state.bonusesUsed = 0;
+      state.isBonusTurn = false;
+      state.activeBonusQuestion = null;
+      state.usedBonusIds = [];
+      state.pendingTypo = null;
+      state.isCheckingWiki = false;
+      state.questionAnswered = false;
+
+      if (mode === 'daily') {
+        const dayIndex = Math.floor(Date.now() / 86400000) % QUESTIONS_GENERAL.length;
+        state.roundQuestions = [QUESTIONS_GENERAL[dayIndex]];
+      } else if (mode === 'marathon') {
+        state.roundQuestions = shuffleArray(QUESTIONS_GENERAL);
+      } else {
+        state.roundQuestions = pickNonRepeatingQuestions(mode, 10);
+      }
+
+      showOnlyScreen('gameScreen');
+      initMap();
+      renderTiers();
+      loadCurrentQuestion();
+      playRetroSound('quack');
+    }
+
+    function restartCurrentMode() {
+      startGame(state.mode);
+    }
+
+    function renderTiers(activeKey = null) {
+      const grid = document.getElementById('tiersGrid');
+      grid.innerHTML = '';
+      getTiers().forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'tier-box' + (t.key === activeKey ? ' active' : '');
+        div.innerHTML = `<div class="tier-name">${t.label}</div><div class="tier-km">+${t.km} km</div>`;
+        grid.appendChild(div);
+      });
+    }
+
+    function loadCurrentQuestion() {
+      if (!state.isBonusTurn && state.mode === 'marathon' && state.qIndex >= state.roundQuestions.length) {
+        state.roundQuestions = [...state.roundQuestions, ...shuffleArray(QUESTIONS_GENERAL)];
+      }
+
+      const q = state.isBonusTurn && state.activeBonusQuestion
+        ? state.activeBonusQuestion
+        : state.roundQuestions[state.qIndex];
+
+      const targetKm = state.mode === 'orljava' ? 89 : 2850;
+      state.questionAnswered = false;
+      state.isCheckingWiki = false;
+
+      updateStreakUI();
+
+      const bonusBanner = document.getElementById('bonusBanner');
+      if (state.isBonusTurn) {
+        bonusBanner.classList.add('show');
+        document.getElementById('bonusRewardLabel').textContent = `+${getBonusKmReward()} km • +80 coina`;
+        document.getElementById('qCounterBox').textContent = `⭐ BONUS (${state.bonusesUsed}/${MAX_BONUSES_PER_ROUND}) • Pitanje ${state.qIndex + 1} / 10`;
+      } else {
+        bonusBanner.classList.remove('show');
+        if (state.mode === 'daily') document.getElementById('qCounterBox').textContent = 'Pitanje dana (1 / 1)';
+        else if (state.mode === 'marathon') document.getElementById('qCounterBox').textContent = `Maraton • ${state.qIndex + 1}. pitanje`;
+        else document.getElementById('qCounterBox').textContent = `Pitanje ${state.qIndex + 1} / 10`;
+      }
+
+      document.getElementById('kmCurrent').textContent = state.km;
+      document.getElementById('kmTarget').textContent = targetKm;
+      document.getElementById('qCategory').textContent = q.category;
+      document.getElementById('qPrompt').textContent = q.prompt;
+      document.getElementById('qHint').textContent = q.hint;
+
+      const input = document.getElementById('answerInput');
+      input.value = '';
+      input.disabled = false;
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('skipBtn').disabled = false;
+      input.focus();
+
+      hideTypo();
+      renderTiers();
+      setFeedback('0 km', '+0 coina', '');
+    }
+
+    function setFeedback(left, right, statusClass) {
+      const bar = document.getElementById('feedbackBar');
+      bar.className = 'feedback-bar' + (statusClass ? ' ' + statusClass : '');
+      document.getElementById('feedbackLeft').textContent = left;
+      document.getElementById('feedbackRight').textContent = right;
+    }
+
+    function showTypo(answerObj) {
+      state.pendingTypo = answerObj;
+      document.getElementById('typoSuggestion').textContent = answerObj.text;
+      document.getElementById('typoBanner').classList.add('show');
+    }
+
+    function hideTypo() {
+      state.pendingTypo = null;
+      document.getElementById('typoBanner').classList.remove('show');
+    }
+
+    function acceptTypo() {
+      if (state.questionAnswered || !state.pendingTypo) return;
+      const ans = state.pendingTypo;
+      hideTypo();
+      applyAcceptedAnswer(ans);
+    }
+
+    async function submitAnswer() {
+      if (state.questionAnswered || state.isCheckingWiki) return;
+      const q = state.isBonusTurn && state.activeBonusQuestion
+        ? state.activeBonusQuestion
+        : state.roundQuestions[state.qIndex];
+      const raw = document.getElementById('answerInput').value.trim();
+      if (!raw) return;
+
+      const match = findLocalMatch(q, raw);
+      if (match.type === 'exact') {
+        hideTypo();
+        applyAcceptedAnswer(match.answer);
+        return;
+      }
+      if (match.type === 'typo') {
+        showTypo(match.answer);
+        setFeedback('Provjeri prijedlog', '+0 coina', '');
+        playRetroSound('typo');
+        return;
+      }
+
+      hideTypo();
+      state.isCheckingWiki = true;
+      document.getElementById('submitBtn').disabled = true;
+      setFeedback('Provjeravam...', '⏳', 'wait');
+
+      const wikiAns = await verifyWithWikipedia(q, raw);
+      state.isCheckingWiki = false;
+      document.getElementById('submitBtn').disabled = false;
+
+      if (wikiAns) {
+        applyAcceptedAnswer(wikiAns);
+      } else {
+        state.rareStreak = 0;
+        updateStreakUI();
+        setFeedback('Nije točno', '+0 coina', 'bad');
+        playRetroSound('bad');
+        if (state.mode === 'marathon') {
+          state.questionAnswered = true;
+          if (state.km > state.marathonBestKm) {
+            state.marathonBestKm = state.km;
+            saveProgress();
+          }
+          setTimeout(() => showSummary(false), 900);
+        }
+      }
+    }
+
+    function calcCoinsReward(gainedKm) {
+      if (state.mode === 'orljava') return Math.max(5, Math.round(gainedKm * 1.5));
+      return Math.max(10, Math.round(gainedKm * 0.12));
+    }
+
+    function applyAcceptedAnswer(ans) {
+      if (state.questionAnswered) return;
+      state.questionAnswered = true;
+      document.getElementById('submitBtn').disabled = true;
+      document.getElementById('skipBtn').disabled = true;
+      document.getElementById('answerInput').disabled = true;
+
+      const q = state.isBonusTurn && state.activeBonusQuestion
+        ? state.activeBonusQuestion
+        : state.roundQuestions[state.qIndex];
+      const tier = getTiers().find(t => t.key === ans.tier) || getTiers()[0];
+
+      let gainedKm = 0;
+      let gainedCoins = 0;
+      let unlockedBonusNow = false;
+
+      if (state.isBonusTurn) {
+        gainedKm = getBonusKmReward();
+        gainedCoins = 80;
+        state.rareStreak = 0;
+      } else {
+        gainedKm = state.mode === 'daily' ? 0 : tier.km;
+        gainedCoins = state.mode === 'daily' ? 140 : calcCoinsReward(gainedKm);
+
+        if (state.mode !== 'daily') {
+          if (RARE_TIERS.has(ans.tier)) {
+            state.rareStreak += 1;
+            if (state.rareStreak >= 5 && state.bonusesUsed < MAX_BONUSES_PER_ROUND) {
+              unlockedBonusNow = true;
+              state.rareStreak = 0;
+              state.bonusesUsed += 1;
+            }
+          } else {
+            state.rareStreak = 0;
+          }
+        }
+      }
+
+      if (state.mode === 'daily') state.dailyDoneDate = getTodayKey();
+
+      const prevKm = state.km;
+      state.km += gainedKm;
+      state.coins += gainedCoins;
+      syncMyLeagueKm(gainedKm);
+
+      if (state.mode === 'marathon' && state.km > state.marathonBestKm) {
+        state.marathonBestKm = state.km;
+      }
+      saveProgress();
+      updateStreakUI();
+
+      const labelText = state.isBonusTurn ? 'Bonus' : (ans.fromWiki ? 'Wikipedia' : tier.label);
+      renderTiers(state.isBonusTurn ? null : tier.key);
+      setFeedback(
+        state.mode === 'daily'
+          ? `${ans.text} • Točno!`
+          : `${ans.text} (${labelText}) • +${gainedKm} km${unlockedBonusNow ? ' • ⭐ BONUS!' : ''}`,
+        `+${gainedCoins} coina`,
+        'ok'
+      );
+      playRetroSound('ok');
+
+      document.getElementById('kmCurrent').textContent = state.km;
+      if (state.mode !== 'daily' && gainedKm > 0) {
+        animateDuckSlowlyToKm(prevKm, state.km);
+      }
+
+      state.history.push({
+        category: q.category,
+        text: `${ans.text} (${labelText})`,
+        km: gainedKm,
+        isBonus: state.isBonusTurn
+      });
+
+      const targetKm = state.mode === 'orljava' ? 89 : 2850;
+      const reachedGoal = state.mode !== 'daily' && state.km >= targetKm;
+
+      setTimeout(() => {
+        if (state.mode === 'daily') {
+          showSummary(true);
+        } else if (reachedGoal) {
+          if (state.mode === 'marathon') {
+            const qCount = state.history.filter(h => !h.isBonus).length;
+            if (state.marathonBestQuestions === 0 || qCount < state.marathonBestQuestions) {
+              state.marathonBestQuestions = qCount;
+              saveProgress();
+            }
+          }
+          showSummary(true);
+        } else if (unlockedBonusNow) {
+          state.isBonusTurn = true;
+          state.activeBonusQuestion = pickBonusQuestion();
+          loadCurrentQuestion();
+        } else if (state.isBonusTurn) {
+          state.isBonusTurn = false;
+          state.activeBonusQuestion = null;
+          nextStep();
+        } else {
+          nextStep();
+        }
+      }, 1550);
+    }
+
+    function skipQuestion() {
+      if (state.questionAnswered || state.isCheckingWiki) return;
+      state.questionAnswered = true;
+      state.rareStreak = 0;
+      updateStreakUI();
+
+      const q = state.isBonusTurn && state.activeBonusQuestion
+        ? state.activeBonusQuestion
+        : state.roundQuestions[state.qIndex];
+      hideTypo();
+      state.history.push({
+        category: q.category,
+        text: 'Preskočeno',
+        km: 0,
+        isBonus: state.isBonusTurn
+      });
+
+      if (state.isBonusTurn) {
+        state.isBonusTurn = false;
+        state.activeBonusQuestion = null;
+        nextStep();
+        return;
+      }
+
+      if (state.mode === 'marathon' || state.mode === 'daily') showSummary(false);
+      else nextStep();
+    }
+
+    function nextStep() {
+      state.qIndex++;
+      if (state.mode !== 'marathon' && state.qIndex >= state.roundQuestions.length) {
+        const targetKm = state.mode === 'orljava' ? 89 : 2850;
+        showSummary(state.km >= targetKm);
+      } else {
+        loadCurrentQuestion();
+      }
+    }
+
+    function showSummary(reachedGoal) {
+      markLeagueRunCompleted();
+      saveProgress();
+
+      const targetKm = state.mode === 'orljava' ? 89 : 2850;
+      const routeName = state.mode === 'orljava' ? 'Orljava' : 'Dunav';
+      showOnlyScreen('summaryScreen');
+
+      document.getElementById('kmSummary').textContent = state.km;
+      document.getElementById('kmSummaryTarget').textContent = targetKm;
+      document.getElementById('coinsSummary').textContent = state.coins;
+
+      const mainCount = state.history.filter(h => !h.isBonus).length;
+
+      if (state.mode === 'daily') {
+        document.getElementById('summaryBadge').textContent = 'Pitanje dana';
+        document.getElementById('summaryTitle').textContent = reachedGoal ? '🎉 Točno! +140 coina' : 'Nije riješeno';
+        document.getElementById('summarySubtitle').textContent = reachedGoal ? 'Novo pitanje je sutra.' : 'Pokušaj ponovno.';
+        document.getElementById('replayBtn').classList.toggle('hidden', reachedGoal);
+      } else if (state.mode === 'marathon') {
+        document.getElementById('summaryBadge').textContent = `Maraton • ${mainCount} pitanja (+${state.bonusesUsed} bonus)`;
+        if (reachedGoal) {
+          launchConfetti();
+          playRetroSound('win');
+          document.getElementById('summaryTitle').textContent = `🏆 Cilj 2850 km u ${mainCount} pitanja!`;
+          document.getElementById('summarySubtitle').textContent = `Rekord: ${state.marathonBestQuestions} pitanja • Najviše: ${state.marathonBestKm} km.`;
+        } else {
+          document.getElementById('summaryTitle').textContent = 'Kraj maratona';
+          document.getElementById('summarySubtitle').textContent = `Pređeno: ${state.km} / 2850 km (${mainCount} pitanja).`;
+        }
+        document.getElementById('replayBtn').classList.remove('hidden');
+      } else {
+        document.getElementById('summaryBadge').textContent = `${mainCount} / 10 (+${state.bonusesUsed} bonus)`;
+        if (reachedGoal) {
+          launchConfetti();
+          playRetroSound('win');
+          document.getElementById('summaryTitle').textContent = `🎉 Cilj! (${state.km}/${targetKm} km)`;
+          document.getElementById('summarySubtitle').textContent = `Stigao si do kraja rute ${routeName}!`;
+        } else {
+          document.getElementById('summaryTitle').textContent = 'Kraj runde';
+          document.getElementById('summarySubtitle').textContent = `Pređeno: ${state.km} / ${targetKm} km (${routeName}).`;
+        }
+        document.getElementById('replayBtn').classList.remove('hidden');
+      }
+
+      const list = document.getElementById('summaryList');
+      list.innerHTML = '';
+      state.history.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'summary-item' + (item.isBonus ? ' bonus-item' : '');
+        div.innerHTML = `
+          <div>
+            <div class="summary-cat">${item.category}</div>
+            <div class="summary-ans">${item.text}</div>
+          </div>
+          <div class="summary-km">${item.km > 0 ? '+' + item.km + ' km' : '0 km'}</div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    document.getElementById('answerInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        if (!e.repeat) submitAnswer();
+      }
+    });
+
+    document.getElementById('friendNameInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        addFriendToLeague();
+      }
+    });
+
+    document.getElementById('playerNameInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmPlayerName();
+      }
+    });
+
+    updateHomeBadges();
+    updateCoinsAndDuckUI();
+    if (!state.playerName) {
+      openNameModal();
+    }
+  </script>
+</body>
+</html>
